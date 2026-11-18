@@ -16,7 +16,7 @@ Este documento reúne el reparto de tareas, las decisiones técnicas y los punto
 ### Brandon: Facturas
 
 - Acceso a datos y reglas de Factura: número único, fechas de emisión y vencimiento, monto.
-- Cálculo automático del saldo y del estado: Pendiente, Parcial, Pagada o Vencida.
+- Cálculo automático del saldo y del estado: Pendiente, Parcial, Pagada o Anulada.
 - Formulario Facturas con registro, búsqueda por cliente o estado y anulación.
 - Validaciones generales de entrada, como campos vacíos, montos y fechas.
 
