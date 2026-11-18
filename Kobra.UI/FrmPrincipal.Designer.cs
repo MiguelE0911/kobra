@@ -1,6 +1,6 @@
-﻿namespace cxc
+namespace Kobra.UI
 {
-    partial class Form1
+    partial class FrmPrincipal
     {
         /// <summary>
         ///  Required designer variable.
@@ -31,7 +31,7 @@
             components = new System.ComponentModel.Container();
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
-            Text = "Form1";
+            Text = "FrmPrincipal";
         }
 
         #endregion

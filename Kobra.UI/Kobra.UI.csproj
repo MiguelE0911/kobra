@@ -1,5 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <ProjectReference Include="..\Kobra.Negocio\Kobra.Negocio.csproj" />
+    <ProjectReference Include="..\Kobra.Entidades\Kobra.Entidades.csproj" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
