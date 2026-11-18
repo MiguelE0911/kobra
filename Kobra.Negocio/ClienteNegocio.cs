@@ -115,7 +115,8 @@ public class ClienteNegocio
         return string.IsNullOrEmpty(t) ? null : t;
     }
 
-    private static bool EmailValido(string email)
+    /// <summary>Compartido con la UI para validar al salir del campo con la misma regla.</summary>
+    public static bool EmailValido(string email)
     {
         if (email.Length > 150 || !MailAddress.TryCreate(email, out var direccion))
             return false;
