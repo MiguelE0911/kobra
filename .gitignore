@@ -1,0 +1,10 @@
+## Visual Studio
+.vs/
+*.user
+*.suo
+
+## Build
+[Bb]in/
+[Oo]bj/
+
+CLAUDE.md
