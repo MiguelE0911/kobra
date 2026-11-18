@@ -159,12 +159,11 @@ El saldo y el estado se **calculan**, no se escriben a mano. Brandon y Wilma deb
 
 ## 6. Preparar el entorno
 
-1. Instalar **SQL Server Express** o **LocalDB** (viene con el instalador de Visual Studio, en la carga de trabajo de almacenamiento y procesamiento de datos).
-2. Ejecutar el script:
-   - SSMS o Azure Data Studio: abrir `Database\01_CrearBaseDatos.sql` y ejecutar.
-   - Línea de comandos: `sqlcmd -S .\SQLEXPRESS -E -f 65001 -i Database\01_CrearBaseDatos.sql`
-   - LocalDB: `sqlcmd -S "(localdb)\MSSQLLocalDB" -E -f 65001 -i Database\01_CrearBaseDatos.sql`
-3. Ajustar `Server=` en `Kobra.UI\App.config` si tu instancia no es `localhost\SQLEXPRESS`. (Cada integrante puede tener un nombre distinto; no subas tu cambio local a la rama común salvo que todos usen el mismo.)
+Cada integrante tiene **su propia base local**. La guía completa, con los pasos del instalador, cómo encontrar el servidor, conectarse y resolver errores, está en **[`docs/base-de-datos.md`](base-de-datos.md)**. Resumen:
+
+1. Instalar **SQL Server Express** con la instancia `SQLEXPRESS`, autenticación de Windows y tu usuario agregado como administrador (o LocalDB).
+2. Ejecutar `Database\01_CrearBaseDatos.sql` (con `sqlcmd` hace falta la opción `-C`; ver la guía).
+3. Ajustar `Server=` en `Kobra.UI\App.config` solo si tu instancia no es `localhost\SQLEXPRESS`, y evitar subir ese cambio (la guía explica cómo).
 4. Abrir `kobra.sln` desde **Archivo, Abrir, Proyecto/Solución** (no con "Abrir carpeta", porque en ese modo no funciona el diseñador de formularios).
 5. Compilar con `dotnet build kobra.sln` o con F6 en Visual Studio.
 
@@ -184,7 +183,8 @@ Si la base no está disponible, la aplicación **no se cierra**: avisa con un me
 2. **"Vencida" se calcula** (columnas `EstaVencida` y `DiasVencidos` de la vista) y no es un estado guardado. Los estados guardados o derivados son Pendiente, Parcial, Pagada y Anulada.
 3. **Inicio de sesión y roles**: nadie lo tiene asignado. Por eso las tablas no guardan todavía el usuario que crea o anula cada documento.
 4. **El inicio de sesión** ¿cuenta como uno de los tres formularios funcionales o es adicional? Está pendiente en `CLAUDE.md`.
-5. **Pruebas contra la base real**: el script SQL todavía no se ha ejecutado contra un servidor. Hay que correrlo y ejecutar la prueba manual de la sección 9 antes de dar por cerrada la rama.
+5. **Estado de las pruebas (18 de noviembre de 2026, SQL Server 2025 Express)**: el script se ejecutó desde cero y por segunda vez sin errores, y se repara si una ejecución quedó a medias. Se comprobaron las 20 restricciones (todas rechazan lo que deben) y la vista `vw_FacturaSaldo` con 7 casos de saldo y estado. La capa de datos y negocio de Clientes y el formulario `FrmClientes` se probaron contra la base real con pruebas automáticas temporales (no están en el repositorio). **Falta que una persona haga la prueba manual de la sección 9 con el mouse y el teclado**, sobre todo el aspecto visual y la comodidad de uso.
+6. **Probar en otro equipo**: todo se verificó en una sola máquina. Brandon y Wilma deben ejecutar el script en la suya y avisar si algo falla.
 
 ## 9. Prueba manual de Clientes (Fase 7)
 
