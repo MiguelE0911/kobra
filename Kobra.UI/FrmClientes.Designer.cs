@@ -137,6 +137,7 @@ namespace Kobra.UI
             dgvClientes.CellFormatting += dgvClientes_CellFormatting;
             dgvClientes.Enter += EnterLista;
             dgvClientes.SelectionChanged += dgvClientes_SelectionChanged;
+            dgvClientes.CurrentCellChanged += dgvClientes_SelectionChanged;
             //
             // colCodigo
             //

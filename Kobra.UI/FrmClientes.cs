@@ -24,7 +24,7 @@ namespace Kobra.UI
         {
             PrepararNuevo();
             CargarLista(mostrarMensaje: true);
-            txtCodigo.Focus();
+            ActiveControl = txtBuscar;   // lo más frecuente es buscar un cliente existente
         }
 
         private void FrmClientes_KeyDown(object? sender, KeyEventArgs e)
@@ -137,7 +137,13 @@ namespace Kobra.UI
 
         private void dgvClientes_SelectionChanged(object? sender, EventArgs e)
         {
+            // Se engancha a SelectionChanged y a CurrentCellChanged porque, según cómo se seleccione la
+            // fila (clic, teclado o código), solo uno de los dos eventos llega con la fila actual ya fijada.
             if (_cargando || dgvClientes.CurrentRow?.DataBoundItem is not Cliente cliente)
+                return;
+
+            // Evita recargar (y pisar lo que se está editando) cuando ya es el cliente mostrado.
+            if (cliente.Id == _clienteId)
                 return;
 
             CargarEnFormulario(cliente);

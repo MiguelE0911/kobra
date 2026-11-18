@@ -18,6 +18,11 @@
     - Dinero en DECIMAL(18,2).
 */
 
+-- Necesario para los índices filtrados. sqlcmd los trae desactivados por defecto.
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
+
 IF DB_ID(N'Kobra') IS NULL
     CREATE DATABASE Kobra;
 GO
@@ -50,14 +55,21 @@ BEGIN
         CONSTRAINT CK_Cliente_Codigo CHECK (LEN(LTRIM(RTRIM(Codigo))) > 0),
         CONSTRAINT CK_Cliente_Nombre CHECK (LEN(LTRIM(RTRIM(Nombre))) > 0)
     );
+END
+GO
 
-    -- Búsqueda por nombre. El código ya tiene índice por su restricción UNIQUE.
+-- Los índices se crean aparte, cada uno con su comprobación: así, si una ejecución
+-- anterior se interrumpió a medias, volver a ejecutar el script completa lo que falte.
+
+-- Búsqueda por nombre. El código ya tiene índice por su restricción UNIQUE.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Cliente_Nombre' AND object_id = OBJECT_ID(N'dbo.Cliente'))
     CREATE NONCLUSTERED INDEX IX_Cliente_Nombre ON dbo.Cliente (Nombre);
+GO
 
-    -- La cédula/RUC es única solo cuando se informa.
+-- La cédula/RUC es única solo cuando se informa.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UX_Cliente_RucCedula' AND object_id = OBJECT_ID(N'dbo.Cliente'))
     CREATE UNIQUE NONCLUSTERED INDEX UX_Cliente_RucCedula
         ON dbo.Cliente (RucCedula) WHERE RucCedula IS NOT NULL;
-END
 GO
 
 /* ---------------------------------------------------------------- Factura */
@@ -85,10 +97,15 @@ BEGIN
         CONSTRAINT CK_Factura_Montos CHECK (Subtotal >= 0 AND Itbms >= 0 AND Total > 0 AND Total = Subtotal + Itbms),
         CONSTRAINT CK_Factura_Anulacion CHECK (Anulada = 0 OR (MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL))
     );
-
-    CREATE NONCLUSTERED INDEX IX_Factura_ClienteId ON dbo.Factura (ClienteId);
-    CREATE NONCLUSTERED INDEX IX_Factura_FechaVencimiento ON dbo.Factura (FechaVencimiento);
 END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Factura_ClienteId' AND object_id = OBJECT_ID(N'dbo.Factura'))
+    CREATE NONCLUSTERED INDEX IX_Factura_ClienteId ON dbo.Factura (ClienteId);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Factura_FechaVencimiento' AND object_id = OBJECT_ID(N'dbo.Factura'))
+    CREATE NONCLUSTERED INDEX IX_Factura_FechaVencimiento ON dbo.Factura (FechaVencimiento);
 GO
 
 /* ------------------------------------------------------------------- Pago */
@@ -110,9 +127,11 @@ BEGIN
         CONSTRAINT CK_Pago_Monto CHECK (Monto > 0),
         CONSTRAINT CK_Pago_Anulacion CHECK (Anulado = 0 OR (MotivoAnulacion IS NOT NULL AND FechaAnulacion IS NOT NULL))
     );
-
-    CREATE NONCLUSTERED INDEX IX_Pago_FacturaId ON dbo.Pago (FacturaId);
 END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Pago_FacturaId' AND object_id = OBJECT_ID(N'dbo.Pago'))
+    CREATE NONCLUSTERED INDEX IX_Pago_FacturaId ON dbo.Pago (FacturaId);
 GO
 
 /* ------------------------------------------------------- vw_FacturaSaldo
