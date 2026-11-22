@@ -22,6 +22,21 @@ public static class Conexion
         return new SqlConnection(cadena);
     }
 
+    /// <summary>Servidor y base de datos de la cadena de conexión, para mostrarlos. No abre la conexión.</summary>
+    public static (string Servidor, string BaseDatos) Destino()
+    {
+        try
+        {
+            var cadena = ConfigurationManager.ConnectionStrings[NombreCadena]?.ConnectionString;
+            var b = new SqlConnectionStringBuilder(cadena);
+            return (b.DataSource, b.InitialCatalog);
+        }
+        catch (ArgumentException)
+        {
+            return (string.Empty, string.Empty);
+        }
+    }
+
     /// <summary>Intenta abrir la conexión. Devuelve el mensaje de error, o null si funcionó.</summary>
     public static string? Probar()
     {

@@ -7,4 +7,6 @@ public static class BaseDatos
 {
     /// <summary>Devuelve el mensaje de error si no hay conexión, o null si todo está bien.</summary>
     public static string? ProbarConexion() => Conexion.Probar();
+
+    public static (string Servidor, string BaseDatos) Destino() => Conexion.Destino();
 }
