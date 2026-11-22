@@ -4,14 +4,16 @@ using Kobra.Negocio;
 
 namespace Kobra.UI
 {
-    public partial class FrmClientes : Form
+    /// <summary>
+    /// Módulo de Clientes: registrar, consultar, actualizar, desactivar y eliminar. Solo orquesta los
+    /// componentes (lista, ficha, barras); las reglas viven en ClienteNegocio.
+    /// </summary>
+    public partial class FrmClientes : FormularioModulo
     {
         private readonly ClienteNegocio _negocio = new();
 
-        private List<Cliente> _clientes = new();
         private int _clienteId;          // 0 = cliente nuevo
         private bool _activo = true;
-        private bool _cargando;          // evita reaccionar a los cambios de selección hechos por código
 
         public FrmClientes()
         {
@@ -24,135 +26,37 @@ namespace Kobra.UI
         {
             PrepararNuevo();
             CargarLista(mostrarMensaje: true);
-            ActiveControl = txtBuscar;   // lo más frecuente es buscar un cliente existente
+            lista.EnfocarBusqueda();   // lo más frecuente es buscar un cliente existente
         }
 
-        private void FrmClientes_KeyDown(object? sender, KeyEventArgs e)
+        protected override bool ProcesarAtajo(Keys tecla)
         {
-            switch (e.KeyData)
+            switch (tecla)
             {
                 case Keys.F2:
-                    txtBuscar.Focus();
-                    txtBuscar.SelectAll();
-                    break;
+                    lista.EnfocarBusqueda();
+                    return true;
                 case Keys.F5:
                     CargarLista(mostrarMensaje: true);
-                    break;
+                    return true;
                 case Keys.Control | Keys.S:
                     Guardar();
-                    break;
+                    return true;
                 case Keys.Control | Keys.N:
                     PrepararNuevo();
-                    break;
+                    return true;
                 default:
-                    return;
+                    return false;
             }
-            e.Handled = true;
-            e.SuppressKeyPress = true;
         }
 
-        // Enter busca si se está en la búsqueda, no hace nada en la lista y guarda en los datos.
-        private void EnterBusqueda(object? sender, EventArgs e) => AcceptButton = btnBuscar;
+        private void lista_BusquedaSolicitada(bool explicita) => CargarLista(mostrarMensaje: explicita);
 
-        private void EnterLista(object? sender, EventArgs e) => AcceptButton = null;
-
-        private void EnterDatos(object? sender, EventArgs e) => AcceptButton = btnGuardar;
-
-        // ------------------------------------------------------------ búsqueda y lista
-
-        private void txtBuscar_TextChanged(object? sender, EventArgs e)
+        private void lista_ClienteSeleccionado(Cliente cliente)
         {
-            // Espera a que el usuario deje de escribir para no consultar en cada tecla.
-            timerBusqueda.Stop();
-            timerBusqueda.Start();
-        }
-
-        private void timerBusqueda_Tick(object? sender, EventArgs e)
-        {
-            timerBusqueda.Stop();
-            CargarLista(mostrarMensaje: false);
-        }
-
-        private void btnBuscar_Click(object? sender, EventArgs e)
-        {
-            timerBusqueda.Stop();
-            CargarLista(mostrarMensaje: true);
-        }
-
-        private void chkSoloActivos_CheckedChanged(object? sender, EventArgs e) =>
-            CargarLista(mostrarMensaje: false);
-
-        /// <summary>
-        /// Recarga la lista según el filtro. <paramref name="seleccionarId"/> deja marcado ese cliente;
-        /// si no se indica, se conserva el que se está editando.
-        /// </summary>
-        private void CargarLista(bool mostrarMensaje, int? seleccionarId = null)
-        {
-            timerBusqueda.Stop();
-            string? error = null;
-
-            try
-            {
-                _clientes = _negocio.Buscar(txtBuscar.Text, chkSoloActivos.Checked);
-            }
-            catch (DatosException ex)
-            {
-                _clientes = new List<Cliente>();
-                error = ex.Message;
-            }
-
-            var idMantener = seleccionarId ?? (_clienteId > 0 ? _clienteId : (int?)null);
-
-            _cargando = true;
-            try
-            {
-                dgvClientes.DataSource = _clientes;
-                dgvClientes.ClearSelection();
-                dgvClientes.CurrentCell = null;
-
-                var fila = idMantener is int id ? _clientes.FindIndex(c => c.Id == id) : -1;
-                if (fila >= 0)
-                {
-                    dgvClientes.Rows[fila].Selected = true;
-                    dgvClientes.CurrentCell = dgvClientes.Rows[fila].Cells[colNombre.Index];
-                }
-            }
-            finally
-            {
-                _cargando = false;
-            }
-
-            if (error is not null)
-            {
-                MostrarMensajeEstado(error, esError: true);
-                if (mostrarMensaje)
-                    MessageBox.Show(this, error, "Clientes", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            MostrarMensajeEstado(_clientes.Count >= ClienteNegocio.MaximoResultados
-                ? $"Mostrando los primeros {ClienteNegocio.MaximoResultados}. Afine la búsqueda."
-                : $"{_clientes.Count} cliente(s)", esError: false);
-        }
-
-        private void dgvClientes_SelectionChanged(object? sender, EventArgs e)
-        {
-            // Se engancha a SelectionChanged y a CurrentCellChanged porque, según cómo se seleccione la
-            // fila (clic, teclado o código), solo uno de los dos eventos llega con la fila actual ya fijada.
-            if (_cargando || dgvClientes.CurrentRow?.DataBoundItem is not Cliente cliente)
-                return;
-
             // Evita recargar (y pisar lo que se está editando) cuando ya es el cliente mostrado.
-            if (cliente.Id == _clienteId)
-                return;
-
-            CargarEnFormulario(cliente);
-        }
-
-        private void dgvClientes_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
-        {
-            if (e.RowIndex >= 0 && dgvClientes.Rows[e.RowIndex].DataBoundItem is Cliente { Activo: false })
-                e.CellStyle!.ForeColor = SystemColors.GrayText;
+            if (cliente.Id != _clienteId)
+                CargarEnFormulario(cliente);
         }
 
         // ------------------------------------------------------------ botones
@@ -168,26 +72,26 @@ namespace Kobra.UI
             if (_clienteId == 0)
                 return;
 
-            var accion = _activo ? "desactivar" : "reactivar";
-            var detalle = _activo ? "\nNo se le podrá facturar mientras esté inactivo." : string.Empty;
-            var respuesta = MessageBox.Show(this,
-                $"¿Desea {accion} al cliente \"{txtNombre.Text.Trim()}\"?{detalle}",
-                "Clientes", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
-            if (respuesta != DialogResult.Yes)
+            var desactivar = _activo;
+            var confirmado = Confirmar(
+                $"¿Desea {(desactivar ? "desactivar" : "reactivar")} a este cliente?",
+                $"Código: {ficha.Codigo}  ·  Nombre: {ficha.Nombre}",
+                desactivar ? "No se le podrá facturar mientras esté inactivo." : null);
+            if (!confirmado)
                 return;
 
             try
             {
-                if (_activo)
+                if (desactivar)
                     _negocio.Desactivar(_clienteId);
                 else
                     _negocio.Reactivar(_clienteId);
 
                 _activo = !_activo;
-                chkActivo.Checked = _activo;
-                ActualizarBotones();
+                ficha.MostrarActivo(_activo);
+                ActualizarEstado();
                 CargarLista(mostrarMensaje: false);
-                MostrarMensajeEstado(_activo ? "Cliente reactivado." : "Cliente desactivado.", esError: false);
+                barraAcciones.MostrarMensaje(_activo ? "Cliente reactivado." : "Cliente desactivado.", esError: false);
             }
             catch (Exception ex) when (ex is ReglaNegocioException or DatosException)
             {
@@ -200,11 +104,12 @@ namespace Kobra.UI
             if (_clienteId == 0)
                 return;
 
-            var respuesta = MessageBox.Show(this,
-                $"¿Eliminar definitivamente al cliente \"{txtNombre.Text.Trim()}\"?\n" +
+            var confirmado = Confirmar(
+                "¿Eliminar definitivamente a este cliente?",
+                $"Código: {ficha.Codigo}  ·  Nombre: {ficha.Nombre}",
                 "Esta acción no se puede deshacer. Si el cliente tiene facturas, no se eliminará.",
-                "Clientes", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
-            if (respuesta != DialogResult.Yes)
+                peligro: true, textoSi: "&Eliminar");
+            if (!confirmado)
                 return;
 
             try
@@ -212,7 +117,7 @@ namespace Kobra.UI
                 _negocio.Eliminar(_clienteId);
                 PrepararNuevo();
                 CargarLista(mostrarMensaje: false);
-                MostrarMensajeEstado("Cliente eliminado.", esError: false);
+                barraAcciones.MostrarMensaje("Cliente eliminado.", esError: false);
             }
             catch (Exception ex) when (ex is ReglaNegocioException or DatosException)
             {
@@ -220,12 +125,25 @@ namespace Kobra.UI
             }
         }
 
-        // ------------------------------------------------------------ guardar
+        // ------------------------------------------------------------ operaciones
+
+        /// <summary>
+        /// Recarga la lista según el filtro. <paramref name="seleccionarId"/> deja marcado ese cliente;
+        /// si no se indica, se conserva el que se está editando.
+        /// </summary>
+        private void CargarLista(bool mostrarMensaje, int? seleccionarId = null)
+        {
+            var mantener = seleccionarId ?? (_clienteId > 0 ? _clienteId : (int?)null);
+            var error = lista.Cargar(mantener);
+
+            if (error is not null && mostrarMensaje)
+                MostrarAdvertencia(error);
+        }
 
         private void Guardar()
         {
-            errorProvider.Clear();
-            var cliente = LeerFormulario();
+            ficha.LimpiarErrores();
+            var cliente = ficha.Leer(_clienteId, _activo);
 
             try
             {
@@ -233,7 +151,7 @@ namespace Kobra.UI
                 {
                     cliente.Id = _negocio.Registrar(cliente);
                     _clienteId = cliente.Id;
-                    ActualizarBotones();
+                    ActualizarEstado();
                 }
                 else
                 {
@@ -241,11 +159,14 @@ namespace Kobra.UI
                 }
 
                 CargarLista(mostrarMensaje: false, seleccionarId: cliente.Id);
-                MostrarMensajeEstado("Cliente guardado.", esError: false);
+                // Recarga la ficha desde la base para mostrar las fechas reales de creación y modificación.
+                if (_negocio.ObtenerPorId(cliente.Id) is { } guardado)
+                    ficha.Cargar(guardado);
+                barraAcciones.MostrarMensaje("Cliente guardado.", esError: false);
             }
             catch (ReglaNegocioException ex)
             {
-                MarcarCampo(ex.Campo, ex.Message);
+                ficha.MarcarCampo(ex.Campo, ex.Message);
                 MostrarError(ex);
             }
             catch (DatosException ex)
@@ -254,129 +175,33 @@ namespace Kobra.UI
             }
         }
 
-        // ------------------------------------------------------------ validación al salir del campo
-
-        private void txtCodigo_Validating(object? sender, System.ComponentModel.CancelEventArgs e) =>
-            errorProvider.SetError(txtCodigo,
-                string.IsNullOrWhiteSpace(txtCodigo.Text) ? "El código es obligatorio." : string.Empty);
-
-        private void txtNombre_Validating(object? sender, System.ComponentModel.CancelEventArgs e) =>
-            errorProvider.SetError(txtNombre,
-                string.IsNullOrWhiteSpace(txtNombre.Text) ? "El nombre es obligatorio." : string.Empty);
-
-        private void txtEmail_Validating(object? sender, System.ComponentModel.CancelEventArgs e)
-        {
-            var correo = txtEmail.Text.Trim();
-            var invalido = correo.Length > 0 && !ClienteNegocio.EmailValido(correo);
-            errorProvider.SetError(txtEmail, invalido ? "El correo electrónico no tiene un formato válido." : string.Empty);
-        }
-
-        // ------------------------------------------------------------ apoyo
-
         private void PrepararNuevo()
         {
             _clienteId = 0;
             _activo = true;
-            errorProvider.Clear();
-
-            txtCodigo.Clear();
-            txtNombre.Clear();
-            txtRucCedula.Clear();
-            txtTelefono.Clear();
-            txtEmail.Clear();
-            txtDireccion.Clear();
-            nudLimiteCredito.Value = 0;
-            nudPlazoDias.Value = 30;
-            chkActivo.Checked = true;
-
-            _cargando = true;
-            try
-            {
-                dgvClientes.ClearSelection();
-                dgvClientes.CurrentCell = null;
-            }
-            finally
-            {
-                _cargando = false;
-            }
-
-            ActualizarBotones();
-            txtCodigo.Focus();
+            ficha.Limpiar();
+            lista.QuitarSeleccion();
+            ActualizarEstado();
+            barraAcciones.RestablecerPista();
+            ficha.EnfocarPrimero();
         }
 
         private void CargarEnFormulario(Cliente c)
         {
-            errorProvider.Clear();
             _clienteId = c.Id;
             _activo = c.Activo;
-
-            txtCodigo.Text = c.Codigo;
-            txtNombre.Text = c.Nombre;
-            txtRucCedula.Text = c.RucCedula ?? string.Empty;
-            txtTelefono.Text = c.Telefono ?? string.Empty;
-            txtEmail.Text = c.Email ?? string.Empty;
-            txtDireccion.Text = c.Direccion ?? string.Empty;
-            nudLimiteCredito.Value = Math.Min(c.LimiteCredito, nudLimiteCredito.Maximum);
-            nudPlazoDias.Value = Math.Min(c.PlazoDias, nudPlazoDias.Maximum);
-            chkActivo.Checked = c.Activo;
-
-            ActualizarBotones();
+            ficha.Cargar(c);
+            ActualizarEstado();
         }
 
-        private Cliente LeerFormulario() => new()
-        {
-            Id = _clienteId,
-            Codigo = txtCodigo.Text,
-            Nombre = txtNombre.Text,
-            RucCedula = txtRucCedula.Text,
-            Telefono = txtTelefono.Text,
-            Email = txtEmail.Text,
-            Direccion = txtDireccion.Text,
-            LimiteCredito = nudLimiteCredito.Value,
-            PlazoDias = (int)nudPlazoDias.Value,
-            Activo = _activo
-        };
-
-        private void ActualizarBotones()
+        /// <summary>Refleja en la barra de título y en los botones si se edita un cliente o se crea uno nuevo.</summary>
+        private void ActualizarEstado()
         {
             var existe = _clienteId > 0;
             btnDesactivar.Enabled = existe;
             btnEliminar.Enabled = existe;
             btnDesactivar.Text = _activo ? "&Desactivar" : "&Reactivar";
-        }
-
-        private void MarcarCampo(string? campo, string mensaje)
-        {
-            Control? control = campo switch
-            {
-                nameof(Cliente.Codigo) => txtCodigo,
-                nameof(Cliente.Nombre) => txtNombre,
-                nameof(Cliente.RucCedula) => txtRucCedula,
-                nameof(Cliente.Telefono) => txtTelefono,
-                nameof(Cliente.Email) => txtEmail,
-                nameof(Cliente.Direccion) => txtDireccion,
-                nameof(Cliente.LimiteCredito) => nudLimiteCredito,
-                nameof(Cliente.PlazoDias) => nudPlazoDias,
-                _ => null
-            };
-
-            if (control is null)
-                return;
-
-            errorProvider.SetError(control, mensaje);
-            control.Focus();
-        }
-
-        private void MostrarError(Exception ex)
-        {
-            var icono = ex is ReglaNegocioException ? MessageBoxIcon.Warning : MessageBoxIcon.Error;
-            MessageBox.Show(this, ex.Message, "Clientes", MessageBoxButtons.OK, icono);
-        }
-
-        private void MostrarMensajeEstado(string texto, bool esError)
-        {
-            lblResultados.ForeColor = esError ? Color.Firebrick : SystemColors.ControlText;
-            lblResultados.Text = texto;
+            barraTitulo.Info = existe ? $"MODO: EDICIÓN · ID {_clienteId}" : "MODO: NUEVO CLIENTE";
         }
     }
 }

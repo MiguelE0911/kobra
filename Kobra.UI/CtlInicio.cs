@@ -23,7 +23,7 @@ namespace Kobra.UI
         private readonly Label _lblConexion = new();
         private readonly Label _lblFecha = new();
         private readonly Label _lblBaseDatos = new();
-        private readonly Button _btnActualizar = new();
+        private readonly BotonTema _btnActualizar = new("↻  Actualizar (F5)");
 
         private readonly Label _lblFacturas = new();
         private readonly Label _lblFacturasDetalle = new();
@@ -195,15 +195,6 @@ namespace Kobra.UI
             barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-            _btnActualizar.Text = "↻  Actualizar (F5)";
-            _btnActualizar.AutoSize = true;
-            _btnActualizar.FlatStyle = FlatStyle.Flat;
-            _btnActualizar.FlatAppearance.BorderColor = Tema.Borde;
-            _btnActualizar.BackColor = Tema.Blanco;
-            _btnActualizar.ForeColor = Tema.Texto;
-            _btnActualizar.Font = Tema.Normal(9F);
-            _btnActualizar.Padding = new Padding(6, 1, 6, 1);
-            _btnActualizar.Margin = new Padding(0);
             _btnActualizar.Click += async (_, _) => await ActualizarAsync();
 
             Configurar(_lblServidor, Tema.Numeros(8.5F), Tema.TextoSecundario, ContentAlignment.MiddleRight);
@@ -294,7 +285,8 @@ namespace Kobra.UI
 
         private Control CrearModulos()
         {
-            var grupo = CrearGrupo("MÓDULOS DEL SISTEMA", out var cuerpo, new Padding(0, 0, 8, 0));
+            var grupo = new TarjetaPanel("MÓDULOS DEL SISTEMA") { Margin = new Padding(0, 0, 8, 0) };
+            var cuerpo = grupo.Cuerpo;
 
             var rejilla = new TableLayoutPanel
             {
@@ -351,7 +343,8 @@ namespace Kobra.UI
 
         private Control CrearCartera()
         {
-            var grupo = CrearGrupo("ESTADO DE LA CARTERA", out var cuerpo, new Padding(0));
+            var grupo = new TarjetaPanel("ESTADO DE LA CARTERA");
+            var cuerpo = grupo.Cuerpo;
 
             // Dos indicadores
             var indicadores = new TableLayoutPanel
@@ -564,40 +557,15 @@ namespace Kobra.UI
         private Control CrearTablaClientes()
         {
             var g = _dgvClientes;
-            g.Dock = DockStyle.Fill;
-            g.ReadOnly = true;
-            g.AllowUserToAddRows = false;
-            g.AllowUserToDeleteRows = false;
-            g.AllowUserToResizeRows = false;
-            g.RowHeadersVisible = false;
-            g.MultiSelect = false;
-            g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            g.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            g.BorderStyle = BorderStyle.None;
-            g.BackgroundColor = Tema.Blanco;
-            g.GridColor = Tema.ContenedorAlto;
-            g.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            g.EnableHeadersVisualStyles = false;
-            g.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-            g.ColumnHeadersHeight = LogicalToDeviceUnits(28);
-            g.RowTemplate.Height = LogicalToDeviceUnits(24);
-            g.ColumnHeadersDefaultCellStyle.BackColor = Tema.Primario;
-            g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            g.ColumnHeadersDefaultCellStyle.SelectionBackColor = Tema.Primario;
-            g.ColumnHeadersDefaultCellStyle.Font = Tema.Negrita(9F);
-            g.DefaultCellStyle.BackColor = Tema.Blanco;
-            g.DefaultCellStyle.ForeColor = Tema.Texto;
-            g.DefaultCellStyle.SelectionBackColor = Tema.Contenedor;
-            g.DefaultCellStyle.SelectionForeColor = Tema.Texto;
-            g.AlternatingRowsDefaultCellStyle.BackColor = Tema.ContenedorBajo;
+            EstiloGrid.Aplicar(g);
 
-            AgregarColumna("Codigo", "Código", 11, false, bold: true);
-            AgregarColumna("Nombre", "Nombre del cliente", 34, false);
-            AgregarColumna("RucCedula", "Cédula / RUC", 15, false);
-            AgregarColumna("Telefono", "Teléfono", 14, false);
-            AgregarColumna("Limite", "Límite de crédito", 15, true, "N2");
-            AgregarColumna("Saldo", "Saldo pendiente", 15, true, "N2", bold: true);
-            AgregarColumna("Uso", "Uso del límite", 11, true);
+            EstiloGrid.AgregarColumna(g, "Codigo", "Código", 11, negrita: true);
+            EstiloGrid.AgregarColumna(g, "Nombre", "Nombre del cliente", 34);
+            EstiloGrid.AgregarColumna(g, "RucCedula", "Cédula / RUC", 15);
+            EstiloGrid.AgregarColumna(g, "Telefono", "Teléfono", 14);
+            EstiloGrid.AgregarColumna(g, "Limite", "Límite de crédito", 15, derecha: true, formato: "N2");
+            EstiloGrid.AgregarColumna(g, "Saldo", "Saldo pendiente", 15, derecha: true, formato: "N2", negrita: true);
+            EstiloGrid.AgregarColumna(g, "Uso", "Uso del límite", 11, derecha: true);
 
             var contenedor = new Panel
             {
@@ -609,75 +577,6 @@ namespace Kobra.UI
             };
             contenedor.Controls.Add(g);
             return contenedor;
-        }
-
-        private void AgregarColumna(string nombre, string encabezado, float peso, bool derecha,
-            string? formato = null, bool bold = false)
-        {
-            var col = new DataGridViewTextBoxColumn
-            {
-                Name = nombre,
-                HeaderText = encabezado,
-                FillWeight = peso,
-                SortMode = DataGridViewColumnSortMode.NotSortable
-            };
-            if (derecha)
-            {
-                col.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleRight;
-                col.HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight;
-            }
-            if (formato is not null)
-                col.DefaultCellStyle.Format = formato;
-            if (bold)
-                col.DefaultCellStyle.Font = Tema.Negrita(9F);
-            _dgvClientes.Columns.Add(col);
-        }
-
-        /// <summary>Tarjeta blanca con título subrayado. Devuelve el panel externo y el cuerpo donde poner el contenido.</summary>
-        private Control CrearGrupo(string titulo, out TableLayoutPanel cuerpo, Padding margen)
-        {
-            var externo = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                AutoSize = true,
-                ColumnCount = 1,
-                RowCount = 2,
-                BackColor = Tema.Blanco,
-                Padding = new Padding(10),
-                Margin = margen
-            };
-            externo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            externo.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-
-            var lbl = new Label
-            {
-                Text = titulo,
-                Font = Tema.Negrita(9.5F),
-                ForeColor = Tema.Primario,
-                AutoSize = true,
-                Dock = DockStyle.Fill,
-                Margin = new Padding(0),
-                Padding = new Padding(0, 0, 0, 4)
-            };
-            lbl.Paint += (_, e) =>
-            {
-                using var lapiz = new Pen(Tema.ContenedorAlto);
-                e.Graphics.DrawLine(lapiz, 0, lbl.Height - 1, lbl.Width, lbl.Height - 1);
-            };
-
-            cuerpo = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                AutoSize = true,
-                ColumnCount = 1,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0)
-            };
-            cuerpo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-
-            externo.Controls.Add(lbl, 0, 0);
-            externo.Controls.Add(cuerpo, 0, 1);
-            return externo;
         }
 
         private static void Configurar(Label l, Font fuente, Color color, ContentAlignment alineacion)

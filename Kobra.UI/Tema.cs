@@ -19,6 +19,10 @@ namespace Kobra.UI
         public static readonly Color SecundarioContenedor = ColorTranslator.FromHtml("#FF656C");
         public static readonly Color TerciarioContenedor = ColorTranslator.FromHtml("#6A4300");
 
+        public static readonly Color ErrorContenedor = ColorTranslator.FromHtml("#FFDAD6");
+        public static readonly Color PeligroOscuro = ColorTranslator.FromHtml("#8F0E22");
+        public static readonly Color TextoApagado = ColorTranslator.FromHtml("#72777F");
+
         public static readonly Color Texto = ColorTranslator.FromHtml("#131C27");
         public static readonly Color TextoSecundario = ColorTranslator.FromHtml("#42474F");
         public static readonly Color Borde = ColorTranslator.FromHtml("#C2C7D0");
