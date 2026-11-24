@@ -141,7 +141,7 @@ Estado al cierre: etapas A a F implementadas en la rama `feature/pagos`.
 
 - Clientes y Facturas ya están implementados. `FrmPagos` sigue siendo el esqueleto conectado al menú (`Ctrl+D3`); los reportes no tienen ítem propio en `FrmPrincipal`.
 - Las tablas `Factura` y `Pago` y la vista `vw_FacturaSaldo` ya están en `Database\01_CrearBaseDatos.sql`.
-- Existen los controles reutilizables en `Kobra.UI\Componentes` (`FormularioModulo`, `BarraTituloModulo`, `BarraAcciones`, `BotonTema`, `TarjetaPanel`, `CampoFicha`, `EstiloGrid`, `DialogoConfirmacion`) y la paleta en `Tema.cs`.
+- Existen los controles reutilizables en `Kobra.UI\Componentes` (`FormularioModulo`, `BarraTituloModulo`, `BarraAcciones`, `BotonTema`, `TarjetaPanel`, `CampoFicha`, `EstiloGrid`, `DialogoConfirmacion`) y la paleta en `Kobra.UI\Componentes\Tema.cs`. Los formularios y controles de cada módulo viven en `Kobra.UI\Clientes`, `Facturas`, `Pagos`, `Reportes` y `Principal`.
 - El panel de inicio (`CtlInicio`) ya muestra la antigüedad global de la cartera en cinco tramos. Esa lógica pertenece a Miguel y no se modifica.
 - Una sola instancia de cada módulo: si ya está abierto, el menú lo trae al frente.
 
@@ -152,7 +152,7 @@ Estado al cierre: etapas A a F implementadas en la rama `feature/pagos`.
 | Entidades | `Kobra.Entidades\Factura.cs` | Propiedades de la tabla más los campos calculados que vienen de `vw_FacturaSaldo` |
 | Datos | `Kobra.Datos\FacturaDatos.cs` | `using` en conexión, comando y lector; abrir la conexión lo más tarde posible; parámetros tipados; `catch (SqlException)` que lanza `DatosException` |
 | Negocio | `Kobra.Negocio\FacturaNegocio.cs` | `Normalizar`, `Validar`, `Error(mensaje, campo)`, inyección de constructores para pruebas |
-| UI | `Kobra.UI\FrmFacturas.cs` | Pseudo-pestañas con `BotonTema` y `UserControl` visibles, atajos F2, F5, Ctrl+N, Ctrl+S y Esc, y captura de `ReglaNegocioException` y `DatosException` sin cerrar la aplicación |
+| UI | `Kobra.UI\Facturas\FrmFacturas.cs` | Pseudo-pestañas con `BotonTema` y `UserControl` visibles, atajos F2, F5, Ctrl+N, Ctrl+S y Esc, y captura de `ReglaNegocioException` y `DatosException` sin cerrar la aplicación |
 
 ### Etapa C — acceso a datos y reglas de Pago
 
