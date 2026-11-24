@@ -182,8 +182,8 @@ Estado al cierre: etapas A a F implementadas en la rama `feature/pagos`.
 
 ### Etapa F — datos de prueba y cierre (implementada)
 
-- `Database\02_datos_prueba.sql` se ejecuta después del `01`, es idempotente y conserva `DEMO001` a `DEMO004`.
-- Cubre factura pagada, parcial, pendiente corriente, vencida en cada uno de los cinco tramos, anulada, pago anulado y cliente inactivo con saldo.
+- `Database\02_datos_prueba.sql` se ejecuta después del `01`, es idempotente y conserva `DEMO001` a `DEMO004`. Se amplió a 60 clientes y 96 facturas: ocho clientes con casos con nombre (`DEMO005` a `DEMO012`) y 48 generados de forma determinista (`DEMO013` a `DEMO060`). Ver `docs\base-de-datos.md`.
+- Cubre factura pagada, parcial, pendiente corriente, vencida en cada uno de los cinco tramos, anulada, pago anulado, clientes inactivos, clientes cerca y por encima del límite, plazo 0 y 60, redondeo de ITBMS y facturas con varios pagos.
 - Verificación realizada: `dotnet build kobra.sln --no-restore -v minimal` termina con 0 advertencias y 0 errores. Los importes, saldos y límites de crédito de los datos demo se validaron por separado.
 - Pendiente en la máquina de cada integrante: ejecutar el script SQL y hacer el recorrido manual registrar factura → registrar pago → ver pagos asociados → anular pago → comprobar que el saldo aumenta → anular la factura (después de anular sus pagos).
 
