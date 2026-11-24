@@ -28,18 +28,20 @@ namespace Kobra.UI
             DecimalPlaces = 2,
             ThousandsSeparator = true,
             TextAlign = HorizontalAlignment.Right,
+            Font = Tema.Numeros(9.5F),
             // Tope de DECIMAL(18,2).
-            Maximum = new decimal(new[] { 276447231, 23027, 0, 131072 })
+            Maximum = Formato.MaximoMonto
         };
         private readonly NumericUpDown _nudPlazo = new()
         {
             Maximum = 3650,
             Value = 30,
-            TextAlign = HorizontalAlignment.Right
+            TextAlign = HorizontalAlignment.Right,
+            Font = Tema.Numeros(9.5F)
         };
         private readonly CheckBox _chkActivo = new() { Text = "Cliente activo", AutoSize = true, Enabled = false, TabStop = false };
-        private readonly TextBox _txtCreacion = new() { ReadOnly = true, TabStop = false };
-        private readonly TextBox _txtModificacion = new() { ReadOnly = true, TabStop = false };
+        private readonly TextBox _txtCreacion = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtModificacion = CampoFicha.CrearSoloLectura();
 
         public CtlClienteFicha()
         {
@@ -66,12 +68,6 @@ namespace Kobra.UI
                                         _nudLimite, _nudPlazo, _txtDireccion };
             for (var i = 0; i < orden.Length; i++)
                 orden[i].TabIndex = i;
-
-            foreach (var c in new[] { _txtCreacion, _txtModificacion })
-            {
-                c.BackColor = Tema.Contenedor;
-                c.ForeColor = Tema.TextoSecundario;
-            }
 
             var rejilla = CampoFicha.CrearRejilla(6);
             CampoFicha.Agregar(rejilla, "Código", _txtCodigo, 0, 0, obligatorio: true);
@@ -131,8 +127,8 @@ namespace Kobra.UI
             _nudLimite.Value = Math.Min(c.LimiteCredito, _nudLimite.Maximum);
             _nudPlazo.Value = Math.Min(c.PlazoDias, _nudPlazo.Maximum);
             _chkActivo.Checked = c.Activo;
-            _txtCreacion.Text = c.FechaCreacion.ToString("yyyy-MM-dd HH:mm");
-            _txtModificacion.Text = c.FechaModificacion?.ToString("yyyy-MM-dd HH:mm") ?? "—";
+            _txtCreacion.Text = c.FechaCreacion.ToString(Formato.FechaHora);
+            _txtModificacion.Text = c.FechaModificacion?.ToString(Formato.FechaHora) ?? "—";
         }
 
         /// <summary>Deja la ficha lista para un cliente nuevo (activo, plazo de 30 días).</summary>

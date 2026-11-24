@@ -1,4 +1,3 @@
-﻿using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -11,8 +10,6 @@ namespace Kobra.UI
     /// </summary>
     internal sealed class CtlFacturaAnulacion : UserControl
     {
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-
         private readonly FacturaNegocio _negocio = new();
         private readonly ErrorProvider _errores = new() { BlinkStyle = ErrorBlinkStyle.NeverBlink };
 
@@ -20,32 +17,18 @@ namespace Kobra.UI
         private readonly TextBox _txtBuscarNumero = new() { MaxLength = 30, CharacterCasing = CharacterCasing.Upper };
         private readonly BotonTema _btnBuscar = new("&Buscar", EstiloBoton.Primario);
 
-        private readonly TextBox _txtNumero = CrearSoloLectura();
-        private readonly TextBox _txtCliente = CrearSoloLectura();
-        private readonly TextBox _txtRuc = CrearSoloLectura();
-        private readonly TextBox _txtEmision = CrearSoloLectura();
-        private readonly TextBox _txtVencimiento = CrearSoloLectura();
-        private readonly TextBox _txtSubtotal = CrearSoloLectura(derecha: true);
-        private readonly TextBox _txtItbms = CrearSoloLectura(derecha: true);
-        private readonly TextBox _txtTotal = CrearSoloLectura(derecha: true);
-        private readonly TextBox _txtSaldo = CrearSoloLectura(derecha: true);
+        private readonly TextBox _txtNumero = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtCliente = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtRuc = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtEmision = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtVencimiento = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtSubtotal = CampoFicha.CrearSoloLectura(derecha: true);
+        private readonly TextBox _txtItbms = CampoFicha.CrearSoloLectura(derecha: true);
+        private readonly TextBox _txtTotal = CampoFicha.CrearSoloLectura(derecha: true);
+        private readonly TextBox _txtSaldo = CampoFicha.CrearSoloLectura(derecha: true);
         private readonly Label _lblEstado = new() { AutoSize = true, Font = Tema.Negrita(9F) };
 
-        private readonly TarjetaPanel _tarjetaMotivo = new("MOTIVO DE ANULACIÓN (OBLIGATORIO)");
-        private readonly TextBox _txtMotivo = new()
-        {
-            Multiline = true,
-            MaxLength = 250,
-            ScrollBars = ScrollBars.Vertical,
-            BorderStyle = BorderStyle.FixedSingle
-        };
-        private readonly Label _lblContador = new()
-        {
-            Text = "0 / 250 caracteres",
-            TextAlign = ContentAlignment.MiddleRight,
-            Font = Tema.Numeros(8.5F),
-            ForeColor = Tema.TextoSecundario
-        };
+        private readonly TarjetaMotivo _motivo = new(tabIndex: 2);
 
         public CtlFacturaAnulacion()
         {
@@ -55,12 +38,13 @@ namespace Kobra.UI
             Margin = new Padding(0);
 
             _errores.ContainerControl = this;
+            _motivo.Enfocado += (_, _) => MotivoEnfocado?.Invoke(this, EventArgs.Empty);
 
-            _txtMotivo.Validating += (_, _) =>
+            _motivo.Caja.Validating += (_, _) =>
             {
                 if (FacturaActual is { Anulada: false })
-                    _errores.SetError(_txtMotivo,
-                        string.IsNullOrWhiteSpace(_txtMotivo.Text) ? "El motivo de anulación es obligatorio." : string.Empty);
+                    _errores.SetError(_motivo.Caja,
+                        string.IsNullOrWhiteSpace(_motivo.Caja.Text) ? Mensajes.MotivoObligatorio : string.Empty);
             };
 
             var raiz = new TableLayoutPanel
@@ -76,7 +60,7 @@ namespace Kobra.UI
             raiz.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             raiz.Controls.Add(CrearTarjetaDatos(), 0, 0);
-            raiz.Controls.Add(CrearTarjetaMotivo(), 0, 1);
+            raiz.Controls.Add(_motivo.Tarjeta, 0, 1);
 
             Controls.Add(raiz);
             ResumeLayout(true);
@@ -88,7 +72,7 @@ namespace Kobra.UI
 
         public Button BotonBuscar => _btnBuscar;
         public Factura? FacturaActual { get; private set; }
-        public string Motivo => _txtMotivo.Text.Trim();
+        public string Motivo => _motivo.Caja.Text.Trim();
 
         public void EnfocarBusqueda()
         {
@@ -105,18 +89,18 @@ namespace Kobra.UI
             _txtNumero.Text = f.Numero;
             _txtCliente.Text = f.ClienteDescripcion;
             _txtRuc.Text = string.IsNullOrWhiteSpace(f.ClienteRucCedula) ? "—" : f.ClienteRucCedula;
-            _txtEmision.Text = f.FechaEmision.ToString("yyyy-MM-dd");
-            _txtVencimiento.Text = f.FechaVencimiento.ToString("yyyy-MM-dd");
-            _txtSubtotal.Text = f.Subtotal.ToString("N2", Cultura);
-            _txtItbms.Text = f.Itbms.ToString("N2", Cultura);
-            _txtTotal.Text = f.Total.ToString("N2", Cultura);
-            _txtSaldo.Text = f.Saldo.ToString("N2", Cultura);
+            _txtEmision.Text = f.FechaEmision.ToString(Formato.Fecha);
+            _txtVencimiento.Text = f.FechaVencimiento.ToString(Formato.Fecha);
+            _txtSubtotal.Text = f.Subtotal.Importe();
+            _txtItbms.Text = f.Itbms.Importe();
+            _txtTotal.Text = f.Total.Importe();
+            _txtSaldo.Text = f.Saldo.Importe();
 
             _lblEstado.ForeColor = f.Anulada || f.EstaVencida ? Tema.Secundario : Tema.Primario;
             _lblEstado.Text = f.EstaVencida ? $"{f.Estado} · Vencida ({f.DiasVencidos} d)" : f.Estado;
 
-            _txtMotivo.Text = f.Anulada ? (f.MotivoAnulacion ?? string.Empty) : string.Empty;
-            _txtMotivo.ReadOnly = f.Anulada;
+            _motivo.Caja.Text = f.Anulada ? (f.MotivoAnulacion ?? string.Empty) : string.Empty;
+            _motivo.Caja.ReadOnly = f.Anulada;
 
             if (f.Anulada)
                 _tarjetaDatos.MostrarNota("Ya se encuentra anulada", esError: true);
@@ -128,7 +112,7 @@ namespace Kobra.UI
             FacturaCargada?.Invoke(f);
 
             if (!f.Anulada && f.TotalPagado == 0)
-                _txtMotivo.Focus();
+                _motivo.Caja.Focus();
         }
 
         public void Limpiar()
@@ -146,16 +130,16 @@ namespace Kobra.UI
             _txtTotal.Clear();
             _txtSaldo.Clear();
             _lblEstado.Text = "—";
-            _txtMotivo.Clear();
-            _txtMotivo.ReadOnly = false;
+            _motivo.Caja.Clear();
+            _motivo.Caja.ReadOnly = false;
             _tarjetaDatos.MostrarNota(string.Empty);
             FacturaCargada?.Invoke(null);
         }
 
         public void MarcarErrorMotivo(string mensaje)
         {
-            _errores.SetError(_txtMotivo, mensaje);
-            _txtMotivo.Focus();
+            _errores.SetError(_motivo.Caja, mensaje);
+            _motivo.Caja.Focus();
         }
 
         // construcción
@@ -216,27 +200,6 @@ namespace Kobra.UI
             return _tarjetaDatos;
         }
 
-        private Control CrearTarjetaMotivo()
-        {
-            _tarjetaMotivo.MostrarNota("* obligatorio");
-            _txtMotivo.Dock = DockStyle.Top;
-            _txtMotivo.Height = LogicalToDeviceUnits(74);
-            _txtMotivo.Margin = new Padding(0, 6, 0, 4);
-            _txtMotivo.TabIndex = 2;
-            _txtMotivo.TextChanged += (_, _) =>
-                _lblContador.Text = $"{_txtMotivo.Text.Length} / 250 caracteres";
-            _txtMotivo.Enter += (_, _) => MotivoEnfocado?.Invoke(this, EventArgs.Empty);
-
-            _lblContador.Dock = DockStyle.Top;
-
-            _tarjetaMotivo.Cuerpo.RowCount = 2;
-            _tarjetaMotivo.Cuerpo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _tarjetaMotivo.Cuerpo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _tarjetaMotivo.Cuerpo.Controls.Add(_txtMotivo, 0, 0);
-            _tarjetaMotivo.Cuerpo.Controls.Add(_lblContador, 0, 1);
-            return _tarjetaMotivo;
-        }
-
         private void BuscarPorNumero()
         {
             _errores.Clear();
@@ -266,17 +229,6 @@ namespace Kobra.UI
                 _tarjetaDatos.MostrarNota(ex.Message, esError: true);
             }
         }
-
-        private static TextBox CrearSoloLectura(bool derecha = false) => new()
-        {
-            ReadOnly = true,
-            TabStop = false,
-            BorderStyle = BorderStyle.FixedSingle,
-            BackColor = Tema.Contenedor,
-            ForeColor = Tema.TextoSecundario,
-            TextAlign = derecha ? HorizontalAlignment.Right : HorizontalAlignment.Left,
-            Font = derecha ? Tema.Numeros(9F) : Tema.Normal(9F)
-        };
 
         protected override void Dispose(bool disposing)
         {

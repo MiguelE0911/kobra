@@ -1,4 +1,3 @@
-﻿using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -10,8 +9,6 @@ namespace Kobra.UI
     /// </summary>
     internal sealed class CtlFacturaConsulta : UserControl
     {
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-
         private readonly FacturaNegocio _negocio = new();
         private readonly ClienteNegocio _clienteNegocio = new();
         private readonly System.Windows.Forms.Timer _timer = new() { Interval = 300 };
@@ -25,7 +22,7 @@ namespace Kobra.UI
 
         private readonly TarjetaPanel _tarjetaLista = new("FACTURAS Y SALDOS");
         private readonly DataGridView _dgvFacturas = new();
-        private readonly Label _lblResumenCartera = new();
+        private readonly BarraTotales _lblResumenCartera = new();
 
         private readonly TarjetaPanel _tarjetaPagos = new("PAGOS ASOCIADOS");
         private readonly DataGridView _dgvPagos = new();
@@ -91,20 +88,11 @@ namespace Kobra.UI
             _cargando = true;
             try
             {
-                var seleccionado = (_cboCliente.SelectedItem as ItemCliente)?.Id ?? 0;
-                var todos = _clienteNegocio.Buscar(null, soloActivos: false);
-
-                var items = new List<ItemCliente> { new(0, "Todos los clientes") };
-                items.AddRange(todos.Select(c => new ItemCliente(c.Id, $"{c.Codigo} - {c.Nombre}")));
-
-                _cboCliente.DataSource = items;
-                _cboCliente.DisplayMember = nameof(ItemCliente.Texto);
-                _cboCliente.ValueMember = nameof(ItemCliente.Id);
-                _cboCliente.SelectedValue = seleccionado;
+                ItemCliente.Llenar(_cboCliente, _clienteNegocio.Buscar(null, soloActivos: false), "Todos los clientes");
             }
-            catch (DatosException)
+            catch (DatosException ex)
             {
-               
+                _tarjetaFiltros.MostrarNota(ex.Message, esError: true);
             }
             finally
             {
@@ -194,7 +182,7 @@ namespace Kobra.UI
 
         private Control CrearFiltros()
         {
-            _tarjetaFiltros.Margin = new Padding(0, 0, 0, 8);
+            _tarjetaFiltros.Margin = new Padding(0, 0, 0, 10);
 
             var fila = new TableLayoutPanel
             {
@@ -273,11 +261,11 @@ namespace Kobra.UI
                 BusquedaSolicitada?.Invoke(true);
             };
 
-            fila.Controls.Add(CrearEtiqueta("Buscar (F2):"), 0, 0);
+            fila.Controls.Add(CampoFicha.CrearEtiquetaFiltro("Buscar (F2):"), 0, 0);
             fila.Controls.Add(_txtBuscar, 1, 0);
-            fila.Controls.Add(CrearEtiqueta("Cliente:"), 2, 0);
+            fila.Controls.Add(CampoFicha.CrearEtiquetaFiltro("Cliente:"), 2, 0);
             fila.Controls.Add(_cboCliente, 3, 0);
-            fila.Controls.Add(CrearEtiqueta("Estado:"), 4, 0);
+            fila.Controls.Add(CampoFicha.CrearEtiquetaFiltro("Estado:"), 4, 0);
             fila.Controls.Add(_cboEstado, 5, 0);
             fila.Controls.Add(_chkSoloVencidas, 6, 0);
             fila.Controls.Add(_btnBuscar, 7, 0);
@@ -289,7 +277,7 @@ namespace Kobra.UI
         private Control CrearListaPrincipal()
         {
             _tarjetaLista.AutoSize = false;
-            _tarjetaLista.Margin = new Padding(0, 0, 0, 8);
+            _tarjetaLista.Margin = new Padding(0, 0, 0, 10);
             _tarjetaLista.Cuerpo.AutoSize = false;
             _tarjetaLista.Cuerpo.RowCount = 2;
             _tarjetaLista.Cuerpo.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -301,11 +289,11 @@ namespace Kobra.UI
 
             EstiloGrid.AgregarColumna(_dgvFacturas, "colNumero", "Número", 12, negrita: true, propiedad: nameof(Factura.Numero));
             EstiloGrid.AgregarColumna(_dgvFacturas, "colCliente", "Cliente", 24, propiedad: nameof(Factura.ClienteDescripcion));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colEmision", "Emisión", 10, formato: "yyyy-MM-dd", propiedad: nameof(Factura.FechaEmision));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colVenc", "Vencimiento", 10, formato: "yyyy-MM-dd", propiedad: nameof(Factura.FechaVencimiento));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colTotal", "Total", 10, derecha: true, formato: "N2", propiedad: nameof(Factura.Total));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colPagado", "Pagado", 10, derecha: true, formato: "N2", propiedad: nameof(Factura.TotalPagado));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colSaldo", "Saldo", 10, derecha: true, formato: "N2", negrita: true, propiedad: nameof(Factura.Saldo));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colEmision", "Emisión", 10, formato: Formato.Fecha, propiedad: nameof(Factura.FechaEmision));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colVenc", "Vencimiento", 10, formato: Formato.Fecha, propiedad: nameof(Factura.FechaVencimiento));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colTotal", "Total (B/.)", 10, derecha: true, formato: Formato.Monto, propiedad: nameof(Factura.Total));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colPagado", "Pagado (B/.)", 10, derecha: true, formato: Formato.Monto, propiedad: nameof(Factura.TotalPagado));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colSaldo", "Saldo (B/.)", 10, derecha: true, formato: Formato.Monto, negrita: true, propiedad: nameof(Factura.Saldo));
             EstiloGrid.AgregarColumna(_dgvFacturas, "colEstado", "Estado", 9, propiedad: nameof(Factura.Estado));
             EstiloGrid.AgregarColumna(_dgvFacturas, "colDias", "Días venc.", 7, derecha: true, propiedad: nameof(Factura.DiasVencidos));
             EstiloGrid.AgregarColumna(_dgvFacturas, "colVencida", "Vencida", 9, propiedad: nameof(Factura.TextoVencida));
@@ -315,15 +303,6 @@ namespace Kobra.UI
             _dgvFacturas.SelectionChanged += DgvFacturas_CambioSeleccion;
             _dgvFacturas.CurrentCellChanged += DgvFacturas_CambioSeleccion;
 
-            _lblResumenCartera.Dock = DockStyle.Fill;
-            _lblResumenCartera.AutoSize = false;
-            _lblResumenCartera.Height = LogicalToDeviceUnits(24);
-            _lblResumenCartera.TextAlign = ContentAlignment.MiddleRight;
-            _lblResumenCartera.Font = Tema.Numeros(8.5F);
-            _lblResumenCartera.ForeColor = Tema.Texto;
-            _lblResumenCartera.BackColor = Tema.ContenedorBajo;
-            _lblResumenCartera.Padding = new Padding(8, 0, 8, 0);
-            _lblResumenCartera.Margin = new Padding(0, 4, 0, 0);
 
             _tarjetaLista.Cuerpo.Controls.Add(_dgvFacturas, 0, 0);
             _tarjetaLista.Cuerpo.Controls.Add(_lblResumenCartera, 0, 1);
@@ -345,7 +324,7 @@ namespace Kobra.UI
             panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             _tarjetaPagos.AutoSize = false;
-            _tarjetaPagos.Margin = new Padding(0, 0, 8, 0);
+            _tarjetaPagos.Margin = new Padding(0, 0, 10, 0);
             _tarjetaPagos.Cuerpo.AutoSize = false;
             _tarjetaPagos.Cuerpo.RowCount = 1;
             _tarjetaPagos.Cuerpo.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -354,10 +333,10 @@ namespace Kobra.UI
             _dgvPagos.Margin = new Padding(0, 6, 0, 0);
             _dgvPagos.TabStop = false;
             EstiloGrid.AgregarColumna(_dgvPagos, "colPagoId", "ID Pago", 14, negrita: true, propiedad: nameof(PagoFactura.Id));
-            EstiloGrid.AgregarColumna(_dgvPagos, "colPagoFecha", "Fecha pago", 20, formato: "yyyy-MM-dd", propiedad: nameof(PagoFactura.FechaPago));
-            EstiloGrid.AgregarColumna(_dgvPagos, "colPagoMonto", "Monto", 22, derecha: true, formato: "N2", negrita: true, propiedad: nameof(PagoFactura.Monto));
+            EstiloGrid.AgregarColumna(_dgvPagos, "colPagoFecha", "Fecha pago", 20, formato: Formato.Fecha, propiedad: nameof(PagoFactura.FechaPago));
+            EstiloGrid.AgregarColumna(_dgvPagos, "colPagoMonto", "Monto (B/.)", 22, derecha: true, formato: Formato.Monto, negrita: true, propiedad: nameof(PagoFactura.Monto));
             EstiloGrid.AgregarColumna(_dgvPagos, "colPagoEstado", "Estado", 18, propiedad: nameof(PagoFactura.EstadoTexto));
-            EstiloGrid.AgregarColumna(_dgvPagos, "colPagoReg", "Registrado", 26, formato: "yyyy-MM-dd HH:mm", propiedad: nameof(PagoFactura.FechaCreacion));
+            EstiloGrid.AgregarColumna(_dgvPagos, "colPagoReg", "Registrado", 26, formato: Formato.FechaHora, propiedad: nameof(PagoFactura.FechaCreacion));
             _tarjetaPagos.Cuerpo.Controls.Add(_dgvPagos, 0, 0);
 
             _tarjetaBalance.AutoSize = false;
@@ -428,9 +407,9 @@ namespace Kobra.UI
             var saldo = activas.Sum(f => f.Saldo);
 
             _lblResumenCartera.Text =
-                $"Facturado activo: B/. {facturado.ToString("N2", Cultura)}   ·   " +
-                $"Cobrado: B/. {cobrado.ToString("N2", Cultura)}   ·   " +
-                $"Saldo pendiente: B/. {saldo.ToString("N2", Cultura)}";
+                $"Facturado activo: {facturado.Dinero()}   ·   " +
+                $"Cobrado: {cobrado.Dinero()}   ·   " +
+                $"Saldo pendiente: {saldo.Dinero()}";
         }
 
         private void MostrarDetalleFactura(Factura? f)
@@ -440,17 +419,17 @@ namespace Kobra.UI
                 _dgvPagos.DataSource = null;
                 _tarjetaPagos.MostrarNota(string.Empty);
                 _tarjetaBalance.MostrarNota(string.Empty);
-                _lblBalTotal.Text = "B/. 0.00";
-                _lblBalPagado.Text = "B/. 0.00";
-                _lblBalSaldo.Text = "B/. 0.00";
+                _lblBalTotal.Text = 0m.Dinero();
+                _lblBalPagado.Text = 0m.Dinero();
+                _lblBalSaldo.Text = 0m.Dinero();
                 _lblBalEstado.Text = "—";
                 return;
             }
 
             _tarjetaBalance.MostrarNota(f.Numero);
-            _lblBalTotal.Text = $"B/. {f.Total.ToString("N2", Cultura)}";
-            _lblBalPagado.Text = $"B/. {f.TotalPagado.ToString("N2", Cultura)}";
-            _lblBalSaldo.Text = $"B/. {f.Saldo.ToString("N2", Cultura)}";
+            _lblBalTotal.Text = $"{f.Total.Dinero()}";
+            _lblBalPagado.Text = $"{f.TotalPagado.Dinero()}";
+            _lblBalSaldo.Text = $"{f.Saldo.Dinero()}";
             _lblBalEstado.ForeColor = f.Anulada || f.EstaVencida ? Tema.Secundario : Tema.Primario;
             _lblBalEstado.Text = f.EstaVencida ? $"{f.Estado} ({f.DiasVencidos} d)" : f.Estado;
 
@@ -467,15 +446,6 @@ namespace Kobra.UI
             }
         }
 
-        private static Label CrearEtiqueta(string texto) => new()
-        {
-            Text = texto,
-            ForeColor = Tema.TextoSecundario,
-            AutoSize = true,
-            Anchor = AnchorStyles.Left,
-            Margin = new Padding(0, 0, 6, 0)
-        };
-
         private static Label CrearEtiquetaBalance(string texto) => new()
         {
             Text = texto,
@@ -487,7 +457,7 @@ namespace Kobra.UI
 
         private static void ConfigurarValor(Label lbl, Color color, bool negrita)
         {
-            lbl.Text = "B/. 0.00";
+            lbl.Text = 0m.Dinero();
             lbl.Dock = DockStyle.Fill;
             lbl.TextAlign = ContentAlignment.MiddleRight;
             lbl.ForeColor = color;
@@ -501,6 +471,5 @@ namespace Kobra.UI
             base.Dispose(disposing);
         }
 
-        private sealed record ItemCliente(int Id, string Texto);
     }
 }

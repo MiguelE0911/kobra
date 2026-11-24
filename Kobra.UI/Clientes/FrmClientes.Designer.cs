@@ -19,26 +19,26 @@ namespace Kobra.UI
         // (CtlClienteLista, CtlClienteFicha, BarraTituloModulo, BarraAcciones).
         private void InitializeComponent()
         {
-            barraTitulo = new BarraTituloModulo("CLIENTES — Mantenimiento de clientes");
+            barraTitulo = new BarraTituloModulo("CLIENTES");
             lista = new CtlClienteLista();
             ficha = new CtlClienteFicha();
-            barraAcciones = new BarraAcciones("Enter guarda · F2 busca · F5 actualiza · Ctrl+N nuevo");
+            barraAcciones = new BarraAcciones(Mensajes.PistaAtajos("nuevo"));
             btnNuevo = new BotonTema("&Nuevo");
             btnGuardar = new BotonTema("&Guardar", EstiloBoton.Primario);
             btnDesactivar = new BotonTema("&Desactivar");
             btnEliminar = new BotonTema("&Eliminar", EstiloBoton.Peligro);
-            btnCerrar = new BotonTema("&Cerrar (Esc)");
+            btnCerrar = new BotonTema("&Cerrar");
             var cuerpo = new TableLayoutPanel();
             cuerpo.SuspendLayout();
             SuspendLayout();
             //
             // cuerpo: lista (ocupa el espacio sobrante) y ficha (alto propio)
             //
-            cuerpo.BackColor = Tema.Superficie;
+            cuerpo.BackColor = Color.Transparent;
             cuerpo.ColumnCount = 1;
             cuerpo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             cuerpo.Dock = DockStyle.Fill;
-            cuerpo.Padding = new Padding(10);
+            cuerpo.Padding = new Padding(MargenCuerpo);
             cuerpo.RowCount = 2;
             cuerpo.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             cuerpo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -95,13 +95,11 @@ namespace Kobra.UI
             //
             AcceptButton = btnGuardar;
             CancelButton = btnCerrar;
-            ClientSize = new Size(LogicalToDeviceUnits(940), LogicalToDeviceUnits(650));
             Controls.Add(cuerpo);
             Controls.Add(barraAcciones);
             Controls.Add(barraTitulo);
-            MinimumSize = new Size(LogicalToDeviceUnits(900), LogicalToDeviceUnits(620));
+            ConfigurarVentana("Clientes");
             Name = "FrmClientes";
-            Text = "Clientes";
             Load += FrmClientes_Load;
             cuerpo.ResumeLayout(false);
             ResumeLayout(false);

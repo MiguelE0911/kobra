@@ -18,11 +18,8 @@ namespace Kobra.UI
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(900, 600);
             Name = "FrmPagos";
-            Text = "Pagos";
+            Text = "Kobra · Pagos";
         }
 
         #endregion

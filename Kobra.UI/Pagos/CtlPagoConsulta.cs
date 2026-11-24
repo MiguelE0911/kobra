@@ -1,4 +1,3 @@
-using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -10,8 +9,6 @@ namespace Kobra.UI
     /// </summary>
     internal sealed class CtlPagoConsulta : UserControl
     {
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-
         private readonly PagoNegocio _negocio = new();
         private readonly ClienteNegocio _clienteNegocio = new();
         private readonly System.Windows.Forms.Timer _timer = new() { Interval = 300 };
@@ -24,7 +21,7 @@ namespace Kobra.UI
 
         private readonly TarjetaPanel _tarjetaLista = new("PAGOS REGISTRADOS");
         private readonly DataGridView _dgvPagos = new();
-        private readonly Label _lblResumen = new();
+        private readonly BarraTotales _lblResumen = new();
 
         private List<Pago> _pagos = [];
         private bool _cargando;
@@ -82,20 +79,11 @@ namespace Kobra.UI
             _cargando = true;
             try
             {
-                var seleccionado = (_cboCliente.SelectedItem as ItemCliente)?.Id ?? 0;
-                var todos = _clienteNegocio.Buscar(null, soloActivos: false);
-
-                var items = new List<ItemCliente> { new(0, "Todos los clientes") };
-                items.AddRange(todos.Select(c => new ItemCliente(c.Id, $"{c.Codigo} - {c.Nombre}")));
-
-                _cboCliente.DataSource = items;
-                _cboCliente.DisplayMember = nameof(ItemCliente.Texto);
-                _cboCliente.ValueMember = nameof(ItemCliente.Id);
-                _cboCliente.SelectedValue = seleccionado;
+                ItemCliente.Llenar(_cboCliente, _clienteNegocio.Buscar(null, soloActivos: false), "Todos los clientes");
             }
-            catch (DatosException)
+            catch (DatosException ex)
             {
-                // La lista queda con lo que tuviera; el error se muestra en la consulta.
+                _tarjetaFiltros.MostrarNota(ex.Message, esError: true);
             }
             finally
             {
@@ -187,7 +175,7 @@ namespace Kobra.UI
 
         private Control CrearFiltros()
         {
-            _tarjetaFiltros.Margin = new Padding(0, 0, 0, 8);
+            _tarjetaFiltros.Margin = new Padding(0, 0, 0, 10);
 
             var fila = new TableLayoutPanel
             {
@@ -251,11 +239,11 @@ namespace Kobra.UI
                 BusquedaSolicitada?.Invoke(true);
             };
 
-            fila.Controls.Add(CrearEtiqueta("Buscar (F2):"), 0, 0);
+            fila.Controls.Add(CampoFicha.CrearEtiquetaFiltro("Buscar (F2):"), 0, 0);
             fila.Controls.Add(_txtBuscar, 1, 0);
-            fila.Controls.Add(CrearEtiqueta("Cliente:"), 2, 0);
+            fila.Controls.Add(CampoFicha.CrearEtiquetaFiltro("Cliente:"), 2, 0);
             fila.Controls.Add(_cboCliente, 3, 0);
-            fila.Controls.Add(CrearEtiqueta("Estado:"), 4, 0);
+            fila.Controls.Add(CampoFicha.CrearEtiquetaFiltro("Estado:"), 4, 0);
             fila.Controls.Add(_cboEstado, 5, 0);
             fila.Controls.Add(_btnBuscar, 6, 0);
 
@@ -278,10 +266,10 @@ namespace Kobra.UI
             EstiloGrid.AgregarColumna(_dgvPagos, "colNumero", "N.º pago", 10, negrita: true, propiedad: nameof(Pago.Id));
             EstiloGrid.AgregarColumna(_dgvPagos, "colFactura", "Factura", 14, propiedad: nameof(Pago.NumeroFactura));
             EstiloGrid.AgregarColumna(_dgvPagos, "colCliente", "Cliente", 26, propiedad: nameof(Pago.ClienteDescripcion));
-            EstiloGrid.AgregarColumna(_dgvPagos, "colFecha", "Fecha pago", 13, formato: "yyyy-MM-dd", propiedad: nameof(Pago.FechaPago));
-            EstiloGrid.AgregarColumna(_dgvPagos, "colMonto", "Monto", 13, derecha: true, formato: "N2", negrita: true, propiedad: nameof(Pago.Monto));
+            EstiloGrid.AgregarColumna(_dgvPagos, "colFecha", "Fecha pago", 13, formato: Formato.Fecha, propiedad: nameof(Pago.FechaPago));
+            EstiloGrid.AgregarColumna(_dgvPagos, "colMonto", "Monto (B/.)", 13, derecha: true, formato: Formato.Monto, negrita: true, propiedad: nameof(Pago.Monto));
             EstiloGrid.AgregarColumna(_dgvPagos, "colEstado", "Estado", 11, propiedad: nameof(Pago.EstadoTexto));
-            EstiloGrid.AgregarColumna(_dgvPagos, "colSaldo", "Saldo factura", 13, derecha: true, formato: "N2", propiedad: nameof(Pago.SaldoFactura));
+            EstiloGrid.AgregarColumna(_dgvPagos, "colSaldo", "Saldo factura (B/.)", 13, derecha: true, formato: Formato.Monto, propiedad: nameof(Pago.SaldoFactura));
             EstiloGrid.AgregarColumna(_dgvPagos, "colMotivo", "Motivo anulación", 20, propiedad: nameof(Pago.MotivoAnulacion));
 
             _dgvPagos.CellFormatting += (_, e) =>
@@ -295,15 +283,6 @@ namespace Kobra.UI
             _dgvPagos.SelectionChanged += DgvPagos_CambioSeleccion;
             _dgvPagos.CurrentCellChanged += DgvPagos_CambioSeleccion;
 
-            _lblResumen.Dock = DockStyle.Fill;
-            _lblResumen.AutoSize = false;
-            _lblResumen.Height = LogicalToDeviceUnits(24);
-            _lblResumen.TextAlign = ContentAlignment.MiddleRight;
-            _lblResumen.Font = Tema.Numeros(8.5F);
-            _lblResumen.ForeColor = Tema.Texto;
-            _lblResumen.BackColor = Tema.ContenedorBajo;
-            _lblResumen.Padding = new Padding(8, 0, 8, 0);
-            _lblResumen.Margin = new Padding(0, 4, 0, 0);
 
             _tarjetaLista.Cuerpo.Controls.Add(_dgvPagos, 0, 0);
             _tarjetaLista.Cuerpo.Controls.Add(_lblResumen, 0, 1);
@@ -325,19 +304,10 @@ namespace Kobra.UI
             var anulados = _pagos.Where(p => p.Anulado).ToList();
 
             _lblResumen.Text =
-                $"Cobrado activo: B/. {activos.Sum(p => p.Monto).ToString("N2", Cultura)}   ·   " +
-                $"Anulado: B/. {anulados.Sum(p => p.Monto).ToString("N2", Cultura)}   ·   " +
+                $"Cobrado activo: {activos.Sum(p => p.Monto).Dinero()}   ·   " +
+                $"Anulado: {anulados.Sum(p => p.Monto).Dinero()}   ·   " +
                 $"{activos.Count} activo(s) / {anulados.Count} anulado(s)";
         }
-
-        private static Label CrearEtiqueta(string texto) => new()
-        {
-            Text = texto,
-            ForeColor = Tema.TextoSecundario,
-            AutoSize = true,
-            Anchor = AnchorStyles.Left,
-            Margin = new Padding(0, 0, 6, 0)
-        };
 
         protected override void Dispose(bool disposing)
         {
@@ -346,6 +316,5 @@ namespace Kobra.UI
             base.Dispose(disposing);
         }
 
-        private sealed record ItemCliente(int Id, string Texto);
     }
 }

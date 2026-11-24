@@ -46,7 +46,7 @@ namespace Kobra.UI
             var icono = new Label
             {
                 Text = peligro ? "!" : "?",
-                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                Font = Tema.Negrita(18F),
                 ForeColor = peligro ? Tema.Secundario : Tema.Primario,
                 BackColor = peligro ? Tema.ErrorContenedor : Tema.Contenedor,
                 TextAlign = ContentAlignment.MiddleCenter,

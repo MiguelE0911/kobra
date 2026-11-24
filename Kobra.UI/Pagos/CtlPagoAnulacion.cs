@@ -1,4 +1,3 @@
-using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -11,8 +10,6 @@ namespace Kobra.UI
     /// </summary>
     internal sealed class CtlPagoAnulacion : UserControl
     {
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-
         private readonly PagoNegocio _negocio = new();
         private readonly ErrorProvider _errores = new() { BlinkStyle = ErrorBlinkStyle.NeverBlink };
 
@@ -20,30 +17,16 @@ namespace Kobra.UI
         private readonly TextBox _txtBuscar = new() { MaxLength = 150 };
         private readonly BotonTema _btnBuscar = new("&Buscar", EstiloBoton.Primario);
 
-        private readonly TextBox _txtNumero = CrearSoloLectura();
-        private readonly TextBox _txtFactura = CrearSoloLectura();
-        private readonly TextBox _txtCliente = CrearSoloLectura();
-        private readonly TextBox _txtFecha = CrearSoloLectura();
-        private readonly TextBox _txtMonto = CrearSoloLectura(derecha: true);
-        private readonly TextBox _txtSaldoActual = CrearSoloLectura(derecha: true);
-        private readonly TextBox _txtSaldoFinal = CrearSoloLectura(derecha: true);
+        private readonly TextBox _txtNumero = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtFactura = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtCliente = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtFecha = CampoFicha.CrearSoloLectura();
+        private readonly TextBox _txtMonto = CampoFicha.CrearSoloLectura(derecha: true);
+        private readonly TextBox _txtSaldoActual = CampoFicha.CrearSoloLectura(derecha: true);
+        private readonly TextBox _txtSaldoFinal = CampoFicha.CrearSoloLectura(derecha: true);
         private readonly Label _lblEstado = new() { AutoSize = true, Font = Tema.Negrita(9F) };
 
-        private readonly TarjetaPanel _tarjetaMotivo = new("MOTIVO DE ANULACIÓN (OBLIGATORIO)");
-        private readonly TextBox _txtMotivo = new()
-        {
-            Multiline = true,
-            MaxLength = 250,
-            ScrollBars = ScrollBars.Vertical,
-            BorderStyle = BorderStyle.FixedSingle
-        };
-        private readonly Label _lblContador = new()
-        {
-            Text = "0 / 250 caracteres",
-            TextAlign = ContentAlignment.MiddleRight,
-            Font = Tema.Numeros(8.5F),
-            ForeColor = Tema.TextoSecundario
-        };
+        private readonly TarjetaMotivo _motivo = new(tabIndex: 2);
 
         public CtlPagoAnulacion()
         {
@@ -53,12 +36,13 @@ namespace Kobra.UI
             Margin = new Padding(0);
 
             _errores.ContainerControl = this;
+            _motivo.Enfocado += (_, _) => MotivoEnfocado?.Invoke(this, EventArgs.Empty);
 
-            _txtMotivo.Validating += (_, _) =>
+            _motivo.Caja.Validating += (_, _) =>
             {
                 if (PagoActual is { Anulado: false })
-                    _errores.SetError(_txtMotivo,
-                        string.IsNullOrWhiteSpace(_txtMotivo.Text) ? "El motivo de anulación es obligatorio." : string.Empty);
+                    _errores.SetError(_motivo.Caja,
+                        string.IsNullOrWhiteSpace(_motivo.Caja.Text) ? Mensajes.MotivoObligatorio : string.Empty);
             };
 
             var raiz = new TableLayoutPanel
@@ -74,7 +58,7 @@ namespace Kobra.UI
             raiz.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             raiz.Controls.Add(CrearTarjetaDatos(), 0, 0);
-            raiz.Controls.Add(CrearTarjetaMotivo(), 0, 1);
+            raiz.Controls.Add(_motivo.Tarjeta, 0, 1);
             Controls.Add(raiz);
 
             ResumeLayout(true);
@@ -86,7 +70,7 @@ namespace Kobra.UI
 
         public Button BotonBuscar => _btnBuscar;
         public Pago? PagoActual { get; private set; }
-        public string Motivo => _txtMotivo.Text.Trim();
+        public string Motivo => _motivo.Caja.Text.Trim();
 
         public void EnfocarBusqueda()
         {
@@ -99,22 +83,22 @@ namespace Kobra.UI
             PagoActual = pago;
             _errores.Clear();
 
-            _txtBuscar.Text = pago.Id.ToString(Cultura);
-            _txtNumero.Text = pago.Id.ToString(Cultura);
+            _txtBuscar.Text = pago.Id.ToString(Formato.Cultura);
+            _txtNumero.Text = pago.Id.ToString(Formato.Cultura);
             _txtFactura.Text = pago.NumeroFactura;
             _txtCliente.Text = pago.ClienteDescripcion;
-            _txtFecha.Text = pago.FechaPago.ToString("yyyy-MM-dd");
-            _txtMonto.Text = pago.Monto.ToString("N2", Cultura);
-            _txtSaldoActual.Text = pago.SaldoFactura.ToString("N2", Cultura);
+            _txtFecha.Text = pago.FechaPago.ToString(Formato.Fecha);
+            _txtMonto.Text = pago.Monto.Importe();
+            _txtSaldoActual.Text = pago.SaldoFactura.Importe();
             _txtSaldoFinal.Text = pago.Anulado
-                ? pago.SaldoFactura.ToString("N2", Cultura)
-                : (pago.SaldoFactura + pago.Monto).ToString("N2", Cultura);
+                ? pago.SaldoFactura.Importe()
+                : (pago.SaldoFactura + pago.Monto).Importe();
 
             _lblEstado.ForeColor = pago.Anulado || pago.FacturaAnulada ? Tema.Secundario : Tema.Primario;
             _lblEstado.Text = pago.Anulado ? "Anulado" : pago.FacturaAnulada ? "Factura anulada" : "Activo";
 
-            _txtMotivo.Text = pago.Anulado ? (pago.MotivoAnulacion ?? string.Empty) : string.Empty;
-            _txtMotivo.ReadOnly = pago.Anulado;
+            _motivo.Caja.Text = pago.Anulado ? (pago.MotivoAnulacion ?? string.Empty) : string.Empty;
+            _motivo.Caja.ReadOnly = pago.Anulado;
 
             if (pago.Anulado)
                 _tarjetaDatos.MostrarNota("Este pago ya está anulado", esError: true);
@@ -126,7 +110,7 @@ namespace Kobra.UI
             PagoCargado?.Invoke(pago);
 
             if (!pago.Anulado)
-                _txtMotivo.Focus();
+                _motivo.Caja.Focus();
         }
 
         public void Limpiar()
@@ -142,17 +126,16 @@ namespace Kobra.UI
             _txtSaldoActual.Clear();
             _txtSaldoFinal.Clear();
             _lblEstado.Text = "—";
-            _txtMotivo.Clear();
-            _txtMotivo.ReadOnly = false;
-            _lblContador.Text = "0 / 250 caracteres";
+            _motivo.Caja.Clear();
+            _motivo.Caja.ReadOnly = false;
             _tarjetaDatos.MostrarNota(string.Empty);
             PagoCargado?.Invoke(null);
         }
 
         public void MarcarErrorMotivo(string mensaje)
         {
-            _errores.SetError(_txtMotivo, mensaje);
-            _txtMotivo.Focus();
+            _errores.SetError(_motivo.Caja, mensaje);
+            _motivo.Caja.Focus();
         }
 
         // construcción
@@ -209,27 +192,6 @@ namespace Kobra.UI
             return _tarjetaDatos;
         }
 
-        private Control CrearTarjetaMotivo()
-        {
-            _tarjetaMotivo.MostrarNota("* obligatorio");
-            _txtMotivo.Dock = DockStyle.Top;
-            _txtMotivo.Height = LogicalToDeviceUnits(74);
-            _txtMotivo.Margin = new Padding(0, 6, 0, 4);
-            _txtMotivo.TabIndex = 2;
-            _txtMotivo.TextChanged += (_, _) =>
-                _lblContador.Text = $"{_txtMotivo.Text.Length} / 250 caracteres";
-            _txtMotivo.Enter += (_, _) => MotivoEnfocado?.Invoke(this, EventArgs.Empty);
-
-            _lblContador.Dock = DockStyle.Top;
-
-            _tarjetaMotivo.Cuerpo.RowCount = 2;
-            _tarjetaMotivo.Cuerpo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _tarjetaMotivo.Cuerpo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _tarjetaMotivo.Cuerpo.Controls.Add(_txtMotivo, 0, 0);
-            _tarjetaMotivo.Cuerpo.Controls.Add(_lblContador, 0, 1);
-            return _tarjetaMotivo;
-        }
-
         private void BuscarPago()
         {
             _errores.Clear();
@@ -263,17 +225,6 @@ namespace Kobra.UI
                 _tarjetaDatos.MostrarNota(ex.Message, esError: true);
             }
         }
-
-        private static TextBox CrearSoloLectura(bool derecha = false) => new()
-        {
-            ReadOnly = true,
-            TabStop = false,
-            BorderStyle = BorderStyle.FixedSingle,
-            BackColor = Tema.Contenedor,
-            ForeColor = Tema.TextoSecundario,
-            TextAlign = derecha ? HorizontalAlignment.Right : HorizontalAlignment.Left,
-            Font = derecha ? Tema.Numeros(9F) : Tema.Normal(9F)
-        };
 
         protected override void Dispose(bool disposing)
         {

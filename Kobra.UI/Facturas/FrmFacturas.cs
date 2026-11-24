@@ -8,14 +8,14 @@ namespace Kobra.UI
     /// Módulo de Facturas: orquesta Consulta y Saldos, Nueva Factura y Anulación.
     /// Las reglas viven en FacturaNegocio y cada vista en su UserControl.
     /// </summary>
-    public partial class FrmFacturas : FormularioModulo
+    public partial class FrmFacturas : FormularioConVistas
     {
         private enum Vista { Consulta, Registro, Anulacion }
 
         private readonly FacturaNegocio _negocio = new();
 
         private readonly BarraTituloModulo _barraTitulo = new("FACTURAS");
-        private readonly BarraAcciones _barraAcciones = new("F2 buscar · F5 actualizar · Ctrl+N nueva · Ctrl+S guardar · Esc cerrar");
+        private readonly BarraAcciones _barraAcciones = new(Mensajes.PistaAtajos("nueva"));
 
         private readonly BotonTema _btnTabConsulta = new("Consulta y Saldos");
         private readonly BotonTema _btnTabRegistro = new("Nueva Factura");
@@ -45,42 +45,12 @@ namespace Kobra.UI
         // construcción
         private void ConstruirInterfaz()
         {
-            Text = "Kobra · Facturas";
-            MinimumSize = new Size(LogicalToDeviceUnits(1020), LogicalToDeviceUnits(680));
-            if (ClientSize.Width < MinimumSize.Width || ClientSize.Height < MinimumSize.Height)
-                ClientSize = new Size(LogicalToDeviceUnits(1120), LogicalToDeviceUnits(740));
-
-            var barraVistas = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Tema.ContenedorBajo,
-                Padding = new Padding(12, 6, 12, 6),
-                Margin = new Padding(0)
-            };
-            _btnTabConsulta.Margin = new Padding(0, 0, 6, 0);
-            _btnTabRegistro.Margin = new Padding(0, 0, 6, 0);
-            barraVistas.Controls.AddRange([_btnTabConsulta, _btnTabRegistro, _btnTabAnulacion]);
+            ConfigurarVentana("Facturas");
 
             _barraAcciones.Agregar(_btnNueva, _btnGuardar, _btnIrAnular, _btnConfirmarAnular, _btnLimpiar, _btnCerrar);
 
-            var cuerpo = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(12),
-                BackColor = Color.Transparent
-            };
-            cuerpo.Controls.Add(_consulta);
-            cuerpo.Controls.Add(_ficha);
-            cuerpo.Controls.Add(_anulacion);
-
-            Controls.Add(cuerpo);
-            Controls.Add(barraVistas);
-            Controls.Add(_barraTitulo);
-            Controls.Add(_barraAcciones);
-
-            CancelButton = _btnCerrar;
+            ArmarMarco(_barraTitulo, _barraAcciones, _btnCerrar,
+                [_btnTabConsulta, _btnTabRegistro, _btnTabAnulacion], _consulta, _ficha, _anulacion);
         }
 
         private void ConectarEventos()
@@ -152,6 +122,8 @@ namespace Kobra.UI
                         _consulta.EnfocarBusqueda();
                     else if (_vistaActual == Vista.Anulacion)
                         _anulacion.EnfocarBusqueda();
+                    else
+                        return false;
                     return true;
                 case Keys.F5:
                     _consulta.CargarClientesFiltro();
@@ -164,8 +136,9 @@ namespace Kobra.UI
                     _ficha.EnfocarPrimero();
                     return true;
                 case Keys.Control | Keys.S:
-                    if (_vistaActual == Vista.Registro)
-                        Guardar();
+                    if (_vistaActual != Vista.Registro)
+                        return false;
+                    Guardar();
                     return true;
                 default:
                     return false;
@@ -182,9 +155,7 @@ namespace Kobra.UI
             _ficha.Visible = vista == Vista.Registro;
             _anulacion.Visible = vista == Vista.Anulacion;
 
-            MarcarTab(_btnTabConsulta, vista == Vista.Consulta);
-            MarcarTab(_btnTabRegistro, vista == Vista.Registro);
-            MarcarTab(_btnTabAnulacion, vista == Vista.Anulacion);
+            MarcarPestana((int)vista);
 
             _btnNueva.Visible = vista == Vista.Consulta;
             _btnIrAnular.Visible = vista == Vista.Consulta;
@@ -213,26 +184,6 @@ namespace Kobra.UI
                 _ficha.EnfocarPrimero();
             else if (vista == Vista.Anulacion)
                 _anulacion.EnfocarBusqueda();
-        }
-
-        private static void MarcarTab(BotonTema btn, bool activo)
-        {
-            if (activo)
-            {
-                btn.BackColor = Tema.PrimarioContenedor;
-                btn.ForeColor = Color.White;
-                btn.FlatAppearance.BorderColor = Tema.PrimarioContenedor;
-                btn.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(Tema.PrimarioContenedor, 0.15f);
-                btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(Tema.PrimarioContenedor, 0.25f);
-            }
-            else
-            {
-                btn.BackColor = Tema.Blanco;
-                btn.ForeColor = Tema.Primario;
-                btn.FlatAppearance.BorderColor = Tema.Borde;
-                btn.FlatAppearance.MouseOverBackColor = Tema.Contenedor;
-                btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(Tema.Contenedor, 0.06f);
-            }
         }
 
         private void CargarConsulta(bool mostrarMensaje, int? seleccionarId = null)
@@ -276,15 +227,15 @@ namespace Kobra.UI
             var motivo = _anulacion.Motivo;
             if (motivo.Length == 0)
             {
-                _anulacion.MarcarErrorMotivo("El motivo de anulación es obligatorio.");
-                MostrarAdvertencia("Debe indicar el motivo de anulación.");
+                _anulacion.MarcarErrorMotivo(Mensajes.MotivoObligatorio);
+                MostrarAdvertencia(Mensajes.MotivoFaltante);
                 return;
             }
 
             var confirmado = Confirmar(
                 $"¿Anular definitivamente la factura {factura.Numero}?",
-                $"Cliente: {factura.ClienteDescripcion}  ·  Total: B/. {factura.Total:N2}",
-                "Esta acción es irreversible y dejará el saldo de la factura en B/. 0.00.",
+                $"Cliente: {factura.ClienteDescripcion}  ·  Total: {factura.Total.Dinero()}",
+                "Esta acción es irreversible y dejará el saldo de la factura en {0m.Dinero()}.",
                 peligro: true,
                 textoSi: "&Anular");
 

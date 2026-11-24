@@ -11,14 +11,15 @@ namespace Kobra.UI
     internal sealed class CtlClienteLista : UserControl
     {
         private readonly ClienteNegocio _negocio = new();
+        private readonly TarjetaPanel _tarjetaFiltros = new("FILTROS DE BÚSQUEDA");
         private readonly TarjetaPanel _tarjeta = new("CLIENTES");
         private readonly TextBox _txtBuscar = new();
-        private readonly BotonTema _btnBuscar = new("&Buscar");
+        private readonly BotonTema _btnBuscar = new("&Buscar", EstiloBoton.Primario);
         private readonly CheckBox _chkSoloActivos = new();
         private readonly DataGridView _dgv = new();
         private readonly System.Windows.Forms.Timer _timer = new() { Interval = 300 };
 
-        private List<Cliente> _clientes = new();
+        private List<Cliente> _clientes = [];
         private bool _cargando;   // evita reaccionar a los cambios de selección hechos por código
 
         public CtlClienteLista()
@@ -28,14 +29,29 @@ namespace Kobra.UI
             Dock = DockStyle.Fill;
             Margin = new Padding(0);
 
+            _tarjetaFiltros.Margin = new Padding(0, 0, 0, 10);
+            _tarjetaFiltros.Cuerpo.Controls.Add(CrearBusqueda(), 0, 0);
+
             _tarjeta.AutoSize = false;
             _tarjeta.Cuerpo.AutoSize = false;
-            _tarjeta.Cuerpo.RowCount = 2;
-            _tarjeta.Cuerpo.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            _tarjeta.Cuerpo.RowCount = 1;
             _tarjeta.Cuerpo.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            _tarjeta.Cuerpo.Controls.Add(CrearBusqueda(), 0, 0);
-            _tarjeta.Cuerpo.Controls.Add(CrearRejilla(), 0, 1);
-            Controls.Add(_tarjeta);
+            _tarjeta.Cuerpo.Controls.Add(CrearRejilla(), 0, 0);
+
+            var raiz = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.Transparent,
+                Margin = new Padding(0)
+            };
+            raiz.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            raiz.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            raiz.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            raiz.Controls.Add(_tarjetaFiltros, 0, 0);
+            raiz.Controls.Add(_tarjeta, 0, 1);
+            Controls.Add(raiz);
 
             _timer.Tick += (_, _) =>
             {
@@ -91,7 +107,7 @@ namespace Kobra.UI
             }
             catch (DatosException ex)
             {
-                _clientes = new List<Cliente>();
+                _clientes = [];
                 error = ex.Message;
             }
 
@@ -135,21 +151,12 @@ namespace Kobra.UI
                 ColumnCount = 4,
                 RowCount = 1,
                 BackColor = Color.Transparent,
-                Margin = new Padding(0, 8, 0, 8)
+                Margin = new Padding(0, 6, 0, 2)
             };
             fila.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             fila.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             fila.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             fila.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-            var etiqueta = new Label
-            {
-                Text = "Buscar (F2):",
-                ForeColor = Tema.TextoSecundario,
-                AutoSize = true,
-                Anchor = AnchorStyles.Left,
-                Margin = new Padding(0, 0, 8, 0)
-            };
 
             _txtBuscar.MaxLength = 150;
             _txtBuscar.PlaceholderText = "Código, nombre o cédula/RUC";
@@ -182,7 +189,7 @@ namespace Kobra.UI
             _chkSoloActivos.CheckedChanged += (_, _) => BusquedaSolicitada?.Invoke(false);
             _chkSoloActivos.Enter += (_, _) => BusquedaEnfocada?.Invoke(this, EventArgs.Empty);
 
-            fila.Controls.Add(etiqueta, 0, 0);
+            fila.Controls.Add(CampoFicha.CrearEtiquetaFiltro("Buscar (F2):"), 0, 0);
             fila.Controls.Add(_txtBuscar, 1, 0);
             fila.Controls.Add(_btnBuscar, 2, 0);
             fila.Controls.Add(_chkSoloActivos, 3, 0);
@@ -199,7 +206,7 @@ namespace Kobra.UI
             EstiloGrid.AgregarColumna(_dgv, "colNombre", "Nombre", 34, propiedad: "Nombre");
             EstiloGrid.AgregarColumna(_dgv, "colRucCedula", "Cédula / RUC", 15, propiedad: "RucCedula");
             EstiloGrid.AgregarColumna(_dgv, "colTelefono", "Teléfono", 14, propiedad: "Telefono");
-            EstiloGrid.AgregarColumna(_dgv, "colLimite", "Límite de crédito", 15, derecha: true, formato: "N2",
+            EstiloGrid.AgregarColumna(_dgv, "colLimite", "Límite de crédito (B/.)", 15, derecha: true, formato: Formato.Monto,
                 propiedad: "LimiteCredito");
             EstiloGrid.AgregarColumna(_dgv, "colPlazo", "Plazo", 8, derecha: true, propiedad: "PlazoDias");
             var activo = EstiloGrid.AgregarColumna(_dgv, "colActivo", "Activo", 8, propiedad: "Activo");

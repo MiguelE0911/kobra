@@ -141,7 +141,7 @@ Estado al cierre: etapas A a F implementadas en la rama `feature/pagos`.
 
 - Clientes y Facturas ya están implementados. `FrmPagos` sigue siendo el esqueleto conectado al menú (`Ctrl+D3`); los reportes no tienen ítem propio en `FrmPrincipal`.
 - Las tablas `Factura` y `Pago` y la vista `vw_FacturaSaldo` ya están en `Database\01_CrearBaseDatos.sql`.
-- Existen los controles reutilizables en `Kobra.UI\Componentes` (`FormularioModulo`, `BarraTituloModulo`, `BarraAcciones`, `BotonTema`, `TarjetaPanel`, `CampoFicha`, `EstiloGrid`, `DialogoConfirmacion`) y la paleta en `Tema.cs`.
+- Existen los controles reutilizables en `Kobra.UI\Componentes` (`FormularioModulo`, `BarraTituloModulo`, `BarraAcciones`, `BotonTema`, `TarjetaPanel`, `CampoFicha`, `EstiloGrid`, `DialogoConfirmacion`) y la paleta en `Kobra.UI\Componentes\Tema.cs`. Los formularios y controles de cada módulo viven en `Kobra.UI\Clientes`, `Facturas`, `Pagos`, `Reportes` y `Principal`.
 - El panel de inicio (`CtlInicio`) ya muestra la antigüedad global de la cartera en cinco tramos. Esa lógica pertenece a Miguel y no se modifica.
 - Una sola instancia de cada módulo: si ya está abierto, el menú lo trae al frente.
 
@@ -152,7 +152,7 @@ Estado al cierre: etapas A a F implementadas en la rama `feature/pagos`.
 | Entidades | `Kobra.Entidades\Factura.cs` | Propiedades de la tabla más los campos calculados que vienen de `vw_FacturaSaldo` |
 | Datos | `Kobra.Datos\FacturaDatos.cs` | `using` en conexión, comando y lector; abrir la conexión lo más tarde posible; parámetros tipados; `catch (SqlException)` que lanza `DatosException` |
 | Negocio | `Kobra.Negocio\FacturaNegocio.cs` | `Normalizar`, `Validar`, `Error(mensaje, campo)`, inyección de constructores para pruebas |
-| UI | `Kobra.UI\FrmFacturas.cs` | Pseudo-pestañas con `BotonTema` y `UserControl` visibles, atajos F2, F5, Ctrl+N, Ctrl+S y Esc, y captura de `ReglaNegocioException` y `DatosException` sin cerrar la aplicación |
+| UI | `Kobra.UI\Facturas\FrmFacturas.cs` | Pseudo-pestañas con `BotonTema` y `UserControl` visibles, atajos F2, F5, Ctrl+N, Ctrl+S y Esc, y captura de `ReglaNegocioException` y `DatosException` sin cerrar la aplicación |
 
 ### Etapa C — acceso a datos y reglas de Pago
 
@@ -182,8 +182,8 @@ Estado al cierre: etapas A a F implementadas en la rama `feature/pagos`.
 
 ### Etapa F — datos de prueba y cierre (implementada)
 
-- `Database\02_datos_prueba.sql` se ejecuta después del `01`, es idempotente y conserva `DEMO001` a `DEMO004`.
-- Cubre factura pagada, parcial, pendiente corriente, vencida en cada uno de los cinco tramos, anulada, pago anulado y cliente inactivo con saldo.
+- `Database\02_datos_prueba.sql` se ejecuta después del `01`, es idempotente y conserva `DEMO001` a `DEMO004`. Se amplió a 60 clientes y 96 facturas: ocho clientes con casos con nombre (`DEMO005` a `DEMO012`) y 48 generados de forma determinista (`DEMO013` a `DEMO060`). Ver `docs\base-de-datos.md`.
+- Cubre factura pagada, parcial, pendiente corriente, vencida en cada uno de los cinco tramos, anulada, pago anulado, clientes inactivos, clientes cerca y por encima del límite, plazo 0 y 60, redondeo de ITBMS y facturas con varios pagos.
 - Verificación realizada: `dotnet build kobra.sln --no-restore -v minimal` termina con 0 advertencias y 0 errores. Los importes, saldos y límites de crédito de los datos demo se validaron por separado.
 - Pendiente en la máquina de cada integrante: ejecutar el script SQL y hacer el recorrido manual registrar factura → registrar pago → ver pagos asociados → anular pago → comprobar que el saldo aumenta → anular la factura (después de anular sus pagos).
 

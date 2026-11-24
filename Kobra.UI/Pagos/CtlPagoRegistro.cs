@@ -1,4 +1,3 @@
-using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -11,8 +10,6 @@ namespace Kobra.UI
     /// </summary>
     internal sealed class CtlPagoRegistro : UserControl
     {
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-        private static readonly decimal MaximoDecimal = new([276447231, 23027, 0, 131072]);
 
         private readonly PagoNegocio _negocio = new();
         private readonly ClienteNegocio _clienteNegocio = new();
@@ -23,23 +20,23 @@ namespace Kobra.UI
         private readonly DataGridView _dgvFacturas = new();
 
         private readonly TarjetaPanel _tarjetaPago = new("DATOS DEL PAGO");
-        private readonly TextBox _txtFactura = CrearSoloLectura();
+        private readonly TextBox _txtFactura = CampoFicha.CrearSoloLectura();
         private readonly Label _lblSaldo = new()
         {
-            Text = "B/. 0.00",
+            Text = 0m.Dinero(),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleRight,
             Font = Tema.Numeros(12F, FontStyle.Bold),
             ForeColor = Tema.Secundario
         };
-        private readonly DateTimePicker _dtpFecha = new() { Format = DateTimePickerFormat.Short };
+        private readonly DateTimePicker _dtpFecha = new() { Format = DateTimePickerFormat.Custom, CustomFormat = Formato.Fecha };
         private readonly NumericUpDown _nudMonto = new()
         {
             DecimalPlaces = 2,
             ThousandsSeparator = true,
             TextAlign = HorizontalAlignment.Right,
             Font = Tema.Numeros(9.5F),
-            Maximum = MaximoDecimal,
+            Maximum = Formato.MaximoMonto,
             Minimum = 0
         };
 
@@ -54,6 +51,12 @@ namespace Kobra.UI
             Margin = new Padding(0);
 
             _errores.ContainerControl = this;
+
+            // Validación al salir del campo, con los mismos mensajes que PagoNegocio.
+            _dgvFacturas.Validating += (_, _) => _errores.SetError(_dgvFacturas,
+                _dgvFacturas.CurrentRow?.DataBoundItem is not Factura ? "Seleccione una factura." : string.Empty);
+            _nudMonto.Validating += (_, _) => _errores.SetError(_nudMonto,
+                _nudMonto.Value <= 0 ? "El monto del pago debe ser mayor que 0." : string.Empty);
 
             var raiz = new TableLayoutPanel
             {
@@ -85,16 +88,7 @@ namespace Kobra.UI
             _cargando = true;
             try
             {
-                var actual = (_cboCliente.SelectedItem as ItemCliente)?.Id ?? 0;
-                var activos = _clienteNegocio.Buscar(null, soloActivos: true);
-
-                var items = new List<ItemCliente> { new(0, "Seleccione un cliente") };
-                items.AddRange(activos.Select(c => new ItemCliente(c.Id, $"{c.Codigo} - {c.Nombre}")));
-
-                _cboCliente.DataSource = items;
-                _cboCliente.DisplayMember = nameof(ItemCliente.Texto);
-                _cboCliente.ValueMember = nameof(ItemCliente.Id);
-                _cboCliente.SelectedValue = actual;
+                ItemCliente.Llenar(_cboCliente, _clienteNegocio.Buscar(null, soloActivos: true), "Seleccione un cliente");
             }
             catch (DatosException ex)
             {
@@ -202,11 +196,11 @@ namespace Kobra.UI
             _dgvFacturas.Margin = new Padding(0, 6, 0, 0);
             _dgvFacturas.TabIndex = 1;
             EstiloGrid.AgregarColumna(_dgvFacturas, "colNumero", "Factura", 15, negrita: true, propiedad: nameof(Factura.Numero));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colEmision", "Emisión", 13, formato: "yyyy-MM-dd", propiedad: nameof(Factura.FechaEmision));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colVenc", "Vencimiento", 13, formato: "yyyy-MM-dd", propiedad: nameof(Factura.FechaVencimiento));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colTotal", "Total", 13, derecha: true, formato: "N2", propiedad: nameof(Factura.Total));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colPagado", "Pagado", 13, derecha: true, formato: "N2", propiedad: nameof(Factura.TotalPagado));
-            EstiloGrid.AgregarColumna(_dgvFacturas, "colSaldo", "Saldo", 16, derecha: true, formato: "N2", negrita: true, propiedad: nameof(Factura.Saldo));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colEmision", "Emisión", 13, formato: Formato.Fecha, propiedad: nameof(Factura.FechaEmision));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colVenc", "Vencimiento", 13, formato: Formato.Fecha, propiedad: nameof(Factura.FechaVencimiento));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colTotal", "Total (B/.)", 13, derecha: true, formato: Formato.Monto, propiedad: nameof(Factura.Total));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colPagado", "Pagado (B/.)", 13, derecha: true, formato: Formato.Monto, propiedad: nameof(Factura.TotalPagado));
+            EstiloGrid.AgregarColumna(_dgvFacturas, "colSaldo", "Saldo (B/.)", 16, derecha: true, formato: Formato.Monto, negrita: true, propiedad: nameof(Factura.Saldo));
             EstiloGrid.AgregarColumna(_dgvFacturas, "colEstado", "Estado", 12, propiedad: nameof(Factura.Estado));
             EstiloGrid.AgregarColumna(_dgvFacturas, "colVencida", "Vencida", 11, propiedad: nameof(Factura.TextoVencida));
 
@@ -289,26 +283,16 @@ namespace Kobra.UI
             if (factura is null)
             {
                 _txtFactura.Clear();
-                _lblSaldo.Text = "B/. 0.00";
+                _lblSaldo.Text = 0m.Dinero();
                 _nudMonto.Value = 0;
                 return;
             }
 
             _txtFactura.Text = factura.Numero;
-            _lblSaldo.Text = $"B/. {factura.Saldo.ToString("N2", Cultura)}";
-            _nudMonto.Maximum = Math.Min(MaximoDecimal, Math.Max(0.01m, factura.Saldo));
+            _lblSaldo.Text = $"{factura.Saldo.Dinero()}";
+            _nudMonto.Maximum = Math.Min(Formato.MaximoMonto, Math.Max(0.01m, factura.Saldo));
             _nudMonto.Value = Math.Min(factura.Saldo, _nudMonto.Maximum);
         }
-
-        private static TextBox CrearSoloLectura() => new()
-        {
-            ReadOnly = true,
-            TabStop = false,
-            BorderStyle = BorderStyle.FixedSingle,
-            BackColor = Tema.Contenedor,
-            ForeColor = Tema.TextoSecundario,
-            Font = Tema.Normal(9F)
-        };
 
         protected override void Dispose(bool disposing)
         {
@@ -317,6 +301,5 @@ namespace Kobra.UI
             base.Dispose(disposing);
         }
 
-        private sealed record ItemCliente(int Id, string Texto);
     }
 }

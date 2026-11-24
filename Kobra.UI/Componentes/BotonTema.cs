@@ -6,6 +6,7 @@ namespace Kobra.UI
     internal sealed class BotonTema : Button
     {
         private readonly EstiloBoton _estilo;
+        private bool _seleccionado;
 
         public BotonTema(string texto, EstiloBoton estilo = EstiloBoton.Secundario)
         {
@@ -23,6 +24,21 @@ namespace Kobra.UI
             AplicarColores();
         }
 
+        /// <summary>Resalta el botón como pestaña activa (para los botones que hacen de pestañas).</summary>
+        [System.ComponentModel.Browsable(false)]
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public bool Seleccionado
+        {
+            get => _seleccionado;
+            set
+            {
+                if (_seleccionado == value)
+                    return;
+                _seleccionado = value;
+                AplicarColores();
+            }
+        }
+
         private void AplicarColores()
         {
             FlatAppearance.BorderSize = 1;
@@ -35,18 +51,28 @@ namespace Kobra.UI
                 return;
             }
 
+            if (_seleccionado)
+            {
+                BackColor = Tema.PrimarioContenedor;
+                ForeColor = Tema.SobrePrimario;
+                FlatAppearance.BorderColor = Tema.PrimarioContenedor;
+                FlatAppearance.MouseOverBackColor = ControlPaint.Dark(Tema.PrimarioContenedor, 0.15f);
+                FlatAppearance.MouseDownBackColor = ControlPaint.Dark(Tema.PrimarioContenedor, 0.25f);
+                return;
+            }
+
             switch (_estilo)
             {
                 case EstiloBoton.Primario:
                     BackColor = Tema.PrimarioContenedor;
-                    ForeColor = Color.White;
+                    ForeColor = Tema.SobrePrimario;
                     FlatAppearance.BorderColor = Tema.PrimarioContenedor;
                     FlatAppearance.MouseOverBackColor = Tema.Primario;
                     FlatAppearance.MouseDownBackColor = Tema.Primario;
                     break;
                 case EstiloBoton.Peligro:
                     BackColor = Tema.Secundario;
-                    ForeColor = Color.White;
+                    ForeColor = Tema.SobrePrimario;
                     FlatAppearance.BorderColor = Tema.Secundario;
                     FlatAppearance.MouseOverBackColor = Tema.PeligroOscuro;
                     FlatAppearance.MouseDownBackColor = Tema.PeligroOscuro;

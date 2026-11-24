@@ -82,6 +82,20 @@ Si todo salió bien, solo verás `Changed database context to 'Kobra'.` y ningú
 
 Abre `Database\01_CrearBaseDatos.sql` desde el programa, conéctate a tu servidor y ejecútalo completo (F5 en SSMS).
 
+### Datos de prueba para la demostración
+
+`Database\02_datos_prueba.sql` es el fixture que usa todo el equipo. Se ejecuta **después** del `01` y carga 60 clientes (`DEMO001` a `DEMO060`) y unas 96 facturas con sus pagos: los cinco tramos de antigüedad, los cuatro estados de factura, pagos anulados, clientes inactivos, un cliente cerca del límite de crédito y otro por encima, plazo 0 y plazo 60, facturas con redondeo de ITBMS y facturas con varios pagos. Con 60 clientes la búsqueda supera el tope de 50 resultados y el panel de inicio llena su lista de 8 clientes.
+
+```powershell
+& 'C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\180\Tools\Binn\SQLCMD.EXE' -S 'localhost\SQLEXPRESS' -E -C -b -I -f 65001 -i Database\02_datos_prueba.sql
+```
+
+- Es **idempotente**: puedes ejecutarlo todas las veces que quieras. Retira las facturas `F-DEMO-%` (con sus pagos) y crea o actualiza los clientes `DEMO%`. No toca lo que hayas registrado con otros códigos o números.
+- Las fechas son relativas al día en que lo ejecutas, así que la antigüedad de saldos siempre es válida. Si pasan los días y quieres las fechas al día, vuelve a ejecutarlo.
+- Los datos son los mismos para todos (no usa números aleatorios).
+- Al final comprueba que no haya saldos negativos y que estén los cinco tramos y los cuatro estados; si algo falla, `-b` hace que `sqlcmd` termine con error.
+- Si ves el error 1934, usas una versión antigua del script. La versión actual ya activa `QUOTED_IDENTIFIER` por dentro.
+
 ## 4. Configurar la aplicación
 
 La cadena de conexión está en `Kobra.UI\App.config`:
@@ -172,7 +186,7 @@ Después vuelve a ejecutar `Database\01_CrearBaseDatos.sql`. Esto solo afecta a 
 ## 6. Cambios futuros en la base
 
 - El script `01_CrearBaseDatos.sql` **no se edita** una vez que el equipo ya lo ejecutó, salvo para corregir errores.
-- Una tabla o columna nueva va en un script nuevo: `Database\02_<descripción>.sql`, `03_...`, y así. Cada integrante ejecuta los scripts nuevos, en orden, después de hacer `git pull`.
+- Una tabla o columna nueva va en un script nuevo: `Database\03_<descripción>.sql`, `04_...`, y así (el `02` es el fixture de datos de prueba). Cada integrante ejecuta los scripts nuevos, en orden, después de hacer `git pull`.
 - Cada script debe poder ejecutarse más de una vez sin errores (usar `IF NOT EXISTS`, `IF OBJECT_ID(...) IS NULL`, `CREATE OR ALTER`).
 - Los scripts empiezan con `SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;` y los índices se crean con su propia comprobación `IF NOT EXISTS`, como en el `01`.
 

@@ -20,7 +20,7 @@ namespace Kobra.UI
 
             _titulo.Text = titulo;
             _titulo.Font = Tema.Negrita(10F);
-            _titulo.ForeColor = Color.White;
+            _titulo.ForeColor = Tema.SobrePrimario;
             _titulo.AutoSize = true;
             _titulo.Margin = new Padding(0);
 
