@@ -135,6 +135,8 @@ El saldo y el estado se **calculan**, no se escriben a mano. Brandon y Wilma deb
 
 ## 5. Estado de los módulos y etapas de Pagos
 
+Estado al cierre: etapas A a F implementadas en la rama `feature/pagos`.
+
 ### Etapa A — punto de partida tras la integración
 
 - Clientes y Facturas ya están implementados. `FrmPagos` sigue siendo el esqueleto conectado al menú (`Ctrl+D3`); los reportes no tienen ítem propio en `FrmPrincipal`.
@@ -159,23 +161,31 @@ El saldo y el estado se **calculan**, no se escriben a mano. Brandon y Wilma deb
 - `Anular` repite la condición `Anulado = 0` dentro del `UPDATE`, igual que la anulación de Factura: es una defensa contra cambios ocurridos entre la lectura y la escritura.
 - `PagoNegocio` valida factura activa, fecha no futura, `Monto > 0` y `Monto <= Saldo`. El motivo de anulación es obligatorio y de máximo 250 caracteres. Los mensajes llevan `nameof(...)` para que la UI marque el control.
 
-### Etapa D — formulario de Pagos
+### Etapa D — formulario de Pagos (implementada)
 
 - `FrmPagos` hereda `FormularioModulo` y copia las pseudo-pestañas de `FrmFacturas`: un `FlowLayoutPanel` de `BotonTema` y un `Panel` con `UserControl`s alternados por `.Visible`.
-- Vistas: consulta de pagos, registro de pago (facturas con saldo del cliente elegido), anulación de pago y consultas/reportes.
-- Las facturas con saldo se obtienen de `vw_FacturaSaldo`; no se guarda un DTO paralelo al de Factura.
-- No se agregan ítems al menú de `FrmPrincipal`.
+- Vistas: consulta de pagos, registro de pago, anulación de pago y consultas/reportes.
+- `CtlPagoConsulta`: filtros por texto, cliente y estado, rejilla de solo lectura y resumen de lo cobrado y anulado.
+- `CtlPagoRegistro`: al elegir un cliente activo se cargan sus facturas con saldo ordenadas por vencimiento. El monto se precarga con el saldo y su máximo queda limitado a ese valor.
+- `CtlPagoAnulacion`: búsqueda por número de pago o factura, saldo actual, saldo al anular y motivo obligatorio de hasta 250 caracteres.
+- `PagoNegocio.ObtenerFacturasConSaldo` reutiliza `FacturaDatos.Buscar` y `vw_FacturaSaldo`; no se creó un DTO paralelo al de Factura.
+- No se agregan ítems al menú de `FrmPrincipal`: el módulo sigue abriéndose con `Ctrl+D3`.
 
-### Etapa E — consultas y reportes
+### Etapa E — consultas y reportes (implementada)
 
-- `ReporteDatos` y `ReporteNegocio` son un par nuevo: estado de cuenta del cliente y antigüedad detallada con filtro por cliente.
-- Se reutilizan los cinco tramos de `ResumenDatos` (Corriente, 1-30, 31-60, 61-90 y más de 90) sin editar los archivos de Miguel.
+- `Reporte.cs` agrupa los DTOs `EstadoCuenta`, `LineaEstadoCuenta`, `AntiguedadSaldos`, `TramoAntiguedad` y `LineaAntiguedad`.
+- `ReporteDatos` consulta `dbo.Cliente`, `dbo.Factura` y `dbo.vw_FacturaSaldo` siempre con parámetros; el saldo no se recalcula en C#.
+- `ReporteNegocio` valida la selección de cliente y agrupa en los cinco tramos de `ResumenDatos` (Corriente, 1-30, 31-60, 61-90 y más de 90) sin editar los archivos de Miguel. Los porcentajes se calculan sobre el saldo total del filtro.
+- `CtlReporteCuenta`: cabecera del cliente, facturas, totales y pagos de la factura seleccionada.
+- `CtlReporteAntiguedad`: filtro opcional por cliente, rejilla de tramos y detalle de facturas al elegir un tramo.
+- Ambos reportes viven como cuarta vista de `FrmPagos`, sin formularios nuevos.
 
-### Etapa F — datos de prueba y cierre
+### Etapa F — datos de prueba y cierre (implementada)
 
 - `Database\02_datos_prueba.sql` se ejecuta después del `01`, es idempotente y conserva `DEMO001` a `DEMO004`.
-- Cubre facturas pagada, parcial, pendiente corriente, vencidas en distintos tramos, anulada, pago anulado y cliente inactivo.
-- Verificación: compilación de la solución y recorrido registrar factura → registrar pago → anular pago → anular factura.
+- Cubre factura pagada, parcial, pendiente corriente, vencida en cada uno de los cinco tramos, anulada, pago anulado y cliente inactivo con saldo.
+- Verificación realizada: `dotnet build kobra.sln --no-restore -v minimal` termina con 0 advertencias y 0 errores. Los importes, saldos y límites de crédito de los datos demo se validaron por separado.
+- Pendiente en la máquina de cada integrante: ejecutar el script SQL y hacer el recorrido manual registrar factura → registrar pago → ver pagos asociados → anular pago → comprobar que el saldo aumenta → anular la factura (después de anular sus pagos).
 
 ### Decisiones confirmadas para Pagos
 
@@ -183,6 +193,7 @@ El saldo y el estado se **calculan**, no se escriben a mano. Brandon y Wilma deb
 - No se toca `FrmPrincipal` ni `ResumenDatos`/`ResumenCartera`.
 - Los nombres de los clientes demo se mantienen por ahora.
 - Los reportes viven dentro de `FrmPagos`, sin formularios nuevos en el menú.
+- Todo lo pendiente de Pagos se entrega en una sola rama (`feature/pagos`) y un único pull request final a `main`, aparte del PR de la Etapa 1 ya mergeado.
 
 ## 6. Preparar el entorno
 
