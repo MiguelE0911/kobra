@@ -1,4 +1,3 @@
-using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -10,21 +9,13 @@ namespace Kobra.UI
     /// </summary>
     internal sealed class CtlReporteAntiguedad : UserControl
     {
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-
         private readonly ReporteNegocio _negocio = new();
         private readonly ClienteNegocio _clienteNegocio = new();
 
         private readonly TarjetaPanel _tarjetaFiltros = new("ANTIGÜEDAD DE SALDOS");
         private readonly ComboBox _cboCliente = new() { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly BotonTema _btnGenerar = new("&Generar", EstiloBoton.Primario);
-        private readonly Label _lblResumen = new()
-        {
-            AutoSize = true,
-            Font = Tema.Numeros(8.5F),
-            ForeColor = Tema.TextoSecundario,
-            Margin = new Padding(12, 8, 0, 0)
-        };
+        private readonly BarraTotales _lblResumen = new();
 
         private readonly TarjetaPanel _tarjetaTramos = new("TRAMOS DE ANTIGÜEDAD");
         private readonly DataGridView _dgvTramos = new();
@@ -87,15 +78,7 @@ namespace Kobra.UI
         {
             try
             {
-                var seleccionado = (_cboCliente.SelectedItem as ItemCliente)?.Id ?? 0;
-                var clientes = _clienteNegocio.Buscar(null, soloActivos: false);
-                var items = new List<ItemCliente> { new(0, "Todos los clientes") };
-                items.AddRange(clientes.Select(c => new ItemCliente(c.Id, $"{c.Codigo} - {c.Nombre}")));
-
-                _cboCliente.DataSource = items;
-                _cboCliente.DisplayMember = nameof(ItemCliente.Texto);
-                _cboCliente.ValueMember = nameof(ItemCliente.Id);
-                _cboCliente.SelectedValue = seleccionado;
+                ItemCliente.Llenar(_cboCliente, _clienteNegocio.Buscar(null, soloActivos: false), "Todos los clientes");
             }
             catch (DatosException ex)
             {
@@ -118,7 +101,7 @@ namespace Kobra.UI
                 _dgvDetalle.DataSource = null;
 
                 _lblResumen.Text =
-                    $"Saldo total: B/. {reporte.SaldoTotal.ToString("N2", Cultura)}   ·   " +
+                    $"Saldo total: {reporte.SaldoTotal.Dinero()}   ·   " +
                     $"{reporte.Facturas} factura(s) con saldo";
                 _tarjetaTramos.MostrarNota("Seleccione un tramo para ver el detalle");
                 _tarjetaFiltros.MostrarNota(string.Empty);
@@ -189,8 +172,8 @@ namespace Kobra.UI
             _dgvTramos.Margin = new Padding(0, 6, 0, 0);
             EstiloGrid.AgregarColumna(_dgvTramos, "colTramo", "Tramo", 24, negrita: true, propiedad: nameof(TramoAntiguedad.Nombre));
             EstiloGrid.AgregarColumna(_dgvTramos, "colFacturas", "Facturas", 16, derecha: true, propiedad: nameof(TramoAntiguedad.Facturas));
-            EstiloGrid.AgregarColumna(_dgvTramos, "colSaldo", "Saldo (B/.)", 30, derecha: true, formato: "N2", negrita: true, propiedad: nameof(TramoAntiguedad.Saldo));
-            EstiloGrid.AgregarColumna(_dgvTramos, "colPorcentaje", "% del saldo", 30, derecha: true, formato: "N2", propiedad: nameof(TramoAntiguedad.Porcentaje));
+            EstiloGrid.AgregarColumna(_dgvTramos, "colSaldo", "Saldo (B/.)", 30, derecha: true, formato: Formato.Monto, negrita: true, propiedad: nameof(TramoAntiguedad.Saldo));
+            EstiloGrid.AgregarColumna(_dgvTramos, "colPorcentaje", "% del saldo", 30, derecha: true, formato: Formato.Porcentaje, propiedad: nameof(TramoAntiguedad.Porcentaje));
 
             _dgvTramos.SelectionChanged += DgvTramos_CambioSeleccion;
             _dgvTramos.CurrentCellChanged += DgvTramos_CambioSeleccion;
@@ -210,8 +193,8 @@ namespace Kobra.UI
             _dgvDetalle.Margin = new Padding(0, 6, 0, 0);
             EstiloGrid.AgregarColumna(_dgvDetalle, "colFactura", "Factura", 18, negrita: true, propiedad: nameof(LineaAntiguedad.Numero));
             EstiloGrid.AgregarColumna(_dgvDetalle, "colCliente", "Cliente", 34, propiedad: nameof(LineaAntiguedad.ClienteDescripcion));
-            EstiloGrid.AgregarColumna(_dgvDetalle, "colVenc", "Vencimiento", 18, formato: "yyyy-MM-dd", propiedad: nameof(LineaAntiguedad.FechaVencimiento));
-            EstiloGrid.AgregarColumna(_dgvDetalle, "colSaldo", "Saldo (B/.)", 18, derecha: true, formato: "N2", propiedad: nameof(LineaAntiguedad.Saldo));
+            EstiloGrid.AgregarColumna(_dgvDetalle, "colVenc", "Vencimiento", 18, formato: Formato.Fecha, propiedad: nameof(LineaAntiguedad.FechaVencimiento));
+            EstiloGrid.AgregarColumna(_dgvDetalle, "colSaldo", "Saldo (B/.)", 18, derecha: true, formato: Formato.Monto, propiedad: nameof(LineaAntiguedad.Saldo));
             EstiloGrid.AgregarColumna(_dgvDetalle, "colDias", "Días venc.", 12, derecha: true, propiedad: nameof(LineaAntiguedad.DiasVencidos));
 
             _tarjetaDetalle.Cuerpo.Controls.Add(_dgvDetalle, 0, 0);
@@ -228,6 +211,5 @@ namespace Kobra.UI
             _tarjetaDetalle.MostrarNota($"{tramo.Nombre} · {tramo.Facturas} factura(s)");
         }
 
-        private sealed record ItemCliente(int Id, string Texto);
     }
 }

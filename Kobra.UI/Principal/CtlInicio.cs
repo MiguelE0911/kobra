@@ -1,4 +1,3 @@
-using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -14,8 +13,6 @@ namespace Kobra.UI
     internal sealed class CtlInicio : UserControl
     {
         // Misma cultura que usan las demás pantallas (la del sistema), para que los montos se lean igual en todas.
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-
         private readonly ResumenNegocio _negocio = new();
         private bool _cargando;
 
@@ -70,7 +67,7 @@ namespace Kobra.UI
             var (servidor, baseDatos) = BaseDatos.Destino();
             _lblServidor.Text = $"SERVIDOR: {(servidor.Length > 0 ? servidor : "—")}";
             _lblBaseDatos.Text = $"BASE DE DATOS: {(baseDatos.Length > 0 ? baseDatos : "—")}";
-            _lblFecha.Text = $"FECHA DEL SISTEMA: {DateTime.Today:yyyy-MM-dd}";
+            _lblFecha.Text = $"FECHA DEL SISTEMA: {DateTime.Today.ToString(Formato.Fecha)}";
             MostrarSinDatos("Sin consultar");
         }
 
@@ -121,27 +118,27 @@ namespace Kobra.UI
             _lblConexion.Text = "SQL CONECTADO";
             _lblConexion.ForeColor = Tema.Primario;
 
-            _lblFacturas.Text = r.FacturasConSaldo.ToString("N0", Cultura);
+            _lblFacturas.Text = r.FacturasConSaldo.ToString("N0", Formato.Cultura);
             _lblFacturasDetalle.Text = r.FacturasVencidas > 0
                 ? $"{r.FacturasVencidas:N0} vencidas"
                 : "Ninguna vencida";
             _lblFacturasDetalle.ForeColor = r.FacturasVencidas > 0 ? Tema.Secundario : Tema.Primario;
 
-            _lblClientes.Text = r.ClientesActivos.ToString("N0", Cultura);
+            _lblClientes.Text = r.ClientesActivos.ToString("N0", Formato.Cultura);
             _lblClientesDetalle.Text = r.ClientesInactivos > 0
                 ? $"{r.ClientesInactivos:N0} inactivos"
                 : "Todos activos";
 
-            _lblSaldoTotal.Text = Dinero(r.SaldoTotal);
+            _lblSaldoTotal.Text = r.SaldoTotal.Dinero();
 
             var tramos = new[] { r.Corriente, r.Tramo1a30, r.Tramo31a60, r.Tramo61a90, r.TramoMasDe90 };
             for (var i = 0; i < tramos.Length; i++)
-                _lblTramos[i].Text = Dinero(tramos[i]);
+                _lblTramos[i].Text = tramos[i].Dinero();
 
             _dgvClientes.Rows.Clear();
             foreach (var c in r.ClientesPrincipales)
             {
-                var uso = c.LimiteCredito > 0 ? (c.Saldo / c.LimiteCredito).ToString("P0", Cultura) : "—";
+                var uso = c.LimiteCredito > 0 ? (c.Saldo / c.LimiteCredito).ToString("P0", Formato.Cultura) : "—";
                 var i = _dgvClientes.Rows.Add(c.Codigo, c.Nombre, c.RucCedula ?? "—", c.Telefono ?? "—",
                     c.LimiteCredito, c.Saldo, uso);
                 if (c.LimiteCredito > 0 && c.Saldo > c.LimiteCredito)
@@ -173,8 +170,6 @@ namespace Kobra.UI
             _lblSync.Text = sinConexion ? $"Último intento: {DateTime.Now:HH:mm:ss}" : " ";
             _lblEstado.Text = sinConexion ? mensaje : " ";
         }
-
-        private static string Dinero(decimal monto) => "B/. " + monto.ToString("N2", Cultura);
 
         // ------------------------------------------------------------ construcción de la pantalla
 
@@ -228,8 +223,8 @@ namespace Kobra.UI
             var logo = new Label
             {
                 Text = "K",
-                Font = new Font("Segoe UI", 20F, FontStyle.Bold),
-                ForeColor = Color.White,
+                Font = Tema.Negrita(20F),
+                ForeColor = Tema.SobrePrimario,
                 BackColor = Tema.Primario,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Size = new Size(LogicalToDeviceUnits(46), LogicalToDeviceUnits(46)),
@@ -380,7 +375,7 @@ namespace Kobra.UI
                 AutoSize = true,
                 Margin = new Padding(0)
             };
-            Configurar(_lblSaldoTotal, new Font("Segoe UI", 18F, FontStyle.Bold), Color.White, ContentAlignment.MiddleLeft);
+            Configurar(_lblSaldoTotal, Tema.Negrita(18F), Tema.SobrePrimario, ContentAlignment.MiddleLeft);
             _lblSaldoTotal.Margin = new Padding(0, 2, 0, 2);
             var notaSaldo = new Label
             {
@@ -563,8 +558,8 @@ namespace Kobra.UI
             EstiloGrid.AgregarColumna(g, "Nombre", "Nombre del cliente", 34);
             EstiloGrid.AgregarColumna(g, "RucCedula", "Cédula / RUC", 15);
             EstiloGrid.AgregarColumna(g, "Telefono", "Teléfono", 14);
-            EstiloGrid.AgregarColumna(g, "Limite", "Límite de crédito", 15, derecha: true, formato: "N2");
-            EstiloGrid.AgregarColumna(g, "Saldo", "Saldo pendiente", 15, derecha: true, formato: "N2", negrita: true);
+            EstiloGrid.AgregarColumna(g, "Limite", "Límite de crédito (B/.)", 15, derecha: true, formato: Formato.Monto);
+            EstiloGrid.AgregarColumna(g, "Saldo", "Saldo pendiente (B/.)", 15, derecha: true, formato: Formato.Monto, negrita: true);
             EstiloGrid.AgregarColumna(g, "Uso", "Uso del límite", 11, derecha: true);
 
             var contenedor = new Panel

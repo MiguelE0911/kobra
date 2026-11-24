@@ -36,12 +36,12 @@ namespace Kobra.UI
             diseno.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             diseno.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            Configurar(_titulo, titulo, Tema.Negrita(10.5F), Color.White);
+            Configurar(_titulo, titulo, Tema.Negrita(10.5F), Tema.SobrePrimario);
             Configurar(_descripcion, descripcion, Tema.Normal(8.5F), Tema.ContenedorBajo);
             _descripcion.AutoSize = false;   // sin AutoSize el texto largo se ajusta al ancho de la tarjeta
             Configurar(_acceso, acceso, Tema.Numeros(8.5F), Tema.ContenedorBajo);
-            Configurar(_abrir, "Abrir formulario →", Tema.Negrita(8.5F), Color.White);
-            _abrir.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold | FontStyle.Underline);
+            Configurar(_abrir, "Abrir formulario →", Tema.Negrita(8.5F), Tema.SobrePrimario);
+            _abrir.Font = Tema.Negrita(8.5F, FontStyle.Underline);
             _abrir.TextAlign = ContentAlignment.MiddleRight;
 
             diseno.Controls.Add(_titulo, 0, 0);

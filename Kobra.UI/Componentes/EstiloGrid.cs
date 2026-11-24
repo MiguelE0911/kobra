@@ -24,7 +24,7 @@ namespace Kobra.UI
             g.ColumnHeadersHeight = g.LogicalToDeviceUnits(28);
             g.RowTemplate.Height = g.LogicalToDeviceUnits(24);
             g.ColumnHeadersDefaultCellStyle.BackColor = Tema.Primario;
-            g.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            g.ColumnHeadersDefaultCellStyle.ForeColor = Tema.SobrePrimario;
             g.ColumnHeadersDefaultCellStyle.SelectionBackColor = Tema.Primario;
             g.ColumnHeadersDefaultCellStyle.Font = Tema.Negrita(9F);
             g.DefaultCellStyle.BackColor = Tema.Blanco;

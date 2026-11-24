@@ -8,6 +8,9 @@ namespace Kobra.UI
     /// </summary>
     public class FormularioModulo : Form
     {
+        /// <summary>Márgenes del cuerpo del módulo, iguales a los de las barras de título y de acciones.</summary>
+        protected const int MargenCuerpo = 12;
+
         public FormularioModulo()
         {
             // Los componentes ya dimensionan en píxeles reales con LogicalToDeviceUnits; si el formulario
@@ -16,6 +19,15 @@ namespace Kobra.UI
             Font = Tema.Normal();
             BackColor = Tema.Superficie;
             KeyPreview = true;
+        }
+
+        /// <summary>Título de ventana ("Kobra · Clientes") y tamaño mínimo comunes a todos los módulos.</summary>
+        protected void ConfigurarVentana(string modulo)
+        {
+            Text = $"Kobra · {modulo}";
+            MinimumSize = new Size(LogicalToDeviceUnits(1020), LogicalToDeviceUnits(680));
+            if (ClientSize.Width < MinimumSize.Width || ClientSize.Height < MinimumSize.Height)
+                ClientSize = new Size(LogicalToDeviceUnits(1120), LogicalToDeviceUnits(740));
         }
 
         /// <summary>

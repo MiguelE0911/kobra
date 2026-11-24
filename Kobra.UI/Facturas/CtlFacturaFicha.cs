@@ -1,4 +1,3 @@
-﻿using System.Globalization;
 using Kobra.Datos;
 using Kobra.Entidades;
 using Kobra.Negocio;
@@ -10,9 +9,6 @@ namespace Kobra.UI
     /// </summary>
     internal sealed class CtlFacturaFicha : UserControl
     {
-        private static CultureInfo Cultura => CultureInfo.CurrentCulture;
-
-        private static readonly decimal MaximoDecimal = new([276447231, 23027, 0, 131072]);
 
         private readonly FacturaNegocio _facturaNegocio = new();
         private readonly ClienteNegocio _clienteNegocio = new();
@@ -21,8 +17,8 @@ namespace Kobra.UI
 
         private readonly TextBox _txtNumero = new() { MaxLength = 30, CharacterCasing = CharacterCasing.Upper };
         private readonly ComboBox _cboCliente = new() { DropDownStyle = ComboBoxStyle.DropDownList };
-        private readonly DateTimePicker _dtpEmision = new() { Format = DateTimePickerFormat.Short };
-        private readonly DateTimePicker _dtpVencimiento = new() { Format = DateTimePickerFormat.Short };
+        private readonly DateTimePicker _dtpEmision = new() { Format = DateTimePickerFormat.Custom, CustomFormat = Formato.Fecha };
+        private readonly DateTimePicker _dtpVencimiento = new() { Format = DateTimePickerFormat.Custom, CustomFormat = Formato.Fecha };
         private readonly Label _lblPlazo = new() { AutoSize = true, ForeColor = Tema.TextoSecundario };
         private readonly Label _lblCredito = new() { AutoSize = true, ForeColor = Tema.Primario };
 
@@ -130,17 +126,7 @@ namespace Kobra.UI
         {
             try
             {
-                var actual = (_cboCliente.SelectedItem as ItemCliente)?.Id;
-                var activos = _clienteNegocio.Buscar(null, soloActivos: true);
-
-                _cboCliente.DataSource = activos
-                    .Select(c => new ItemCliente(c.Id, $"{c.Codigo} - {c.Nombre}", c))
-                    .ToList();
-                _cboCliente.DisplayMember = nameof(ItemCliente.Texto);
-                _cboCliente.ValueMember = nameof(ItemCliente.Id);
-
-                if (actual is int id)
-                    _cboCliente.SelectedValue = id;
+                ItemCliente.Llenar(_cboCliente, _clienteNegocio.Buscar(null, soloActivos: true));
             }
             catch (DatosException ex)
             {
@@ -171,7 +157,7 @@ namespace Kobra.UI
                 _nudItbms.Enabled = false;
                 _nudSubtotal.Value = 0;
                 _nudItbms.Value = 0;
-                _txtTotal.Text = 0m.ToString("N2", Cultura);
+                _txtTotal.Text = 0m.Importe();
 
                 if (_cboCliente.Items.Count > 0 && _cboCliente.SelectedIndex < 0)
                     _cboCliente.SelectedIndex = 0;
@@ -251,13 +237,13 @@ namespace Kobra.UI
                 var disponible = cliente.LimiteCredito - saldo;
                 _lblCredito.ForeColor = disponible <= 0 ? Tema.Secundario : Tema.Primario;
                 _lblCredito.Text =
-                    $"Límite: B/. {cliente.LimiteCredito.ToString("N2", Cultura)} · " +
-                    $"Saldo: B/. {saldo.ToString("N2", Cultura)} · " +
-                    $"Disp.: B/. {disponible.ToString("N2", Cultura)}";
+                    $"Límite: {cliente.LimiteCredito.Dinero()} · " +
+                    $"Saldo: {saldo.Dinero()} · " +
+                    $"Disp.: {disponible.Dinero()}";
             }
             catch (DatosException)
             {
-                _lblCredito.Text = $"Límite: B/. {cliente.LimiteCredito.ToString("N2", Cultura)}";
+                _lblCredito.Text = $"Límite: {cliente.LimiteCredito.Dinero()}";
             }
         }
 
@@ -289,7 +275,7 @@ namespace Kobra.UI
                     _nudItbms.Value = Math.Round(_nudSubtotal.Value * 0.07m, 2, MidpointRounding.AwayFromZero);
 
                 var total = _nudSubtotal.Value + _nudItbms.Value;
-                _txtTotal.Text = total.ToString("N2", Cultura);
+                _txtTotal.Text = total.Importe();
             }
             finally
             {
@@ -303,7 +289,7 @@ namespace Kobra.UI
             ThousandsSeparator = true,
             TextAlign = HorizontalAlignment.Right,
             Font = Tema.Numeros(9.5F),
-            Maximum = MaximoDecimal
+            Maximum = Formato.MaximoMonto
         };
 
         protected override void Dispose(bool disposing)
@@ -313,6 +299,5 @@ namespace Kobra.UI
             base.Dispose(disposing);
         }
 
-        private sealed record ItemCliente(int Id, string Texto, Cliente Cliente);
     }
 }

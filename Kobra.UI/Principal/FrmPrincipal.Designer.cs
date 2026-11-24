@@ -127,7 +127,7 @@ namespace Kobra.UI
             MainMenuStrip = menuPrincipal;
             Name = "FrmPrincipal";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Kobra - Cuentas por cobrar";
+            Text = "Kobra · Cuentas por cobrar";
             WindowState = FormWindowState.Maximized;
             KeyPreview = true;
             KeyDown += FrmPrincipal_KeyDown;

@@ -6,6 +6,28 @@ namespace Kobra.UI
     /// </summary>
     internal static class CampoFicha
     {
+        /// <summary>Caja de texto de solo lectura con el fondo de los datos calculados; los importes van a la derecha.</summary>
+        public static TextBox CrearSoloLectura(bool derecha = false) => new()
+        {
+            ReadOnly = true,
+            TabStop = false,
+            BorderStyle = BorderStyle.FixedSingle,
+            BackColor = Tema.Contenedor,
+            ForeColor = Tema.TextoSecundario,
+            TextAlign = derecha ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+            Font = derecha ? Tema.Numeros(9F) : Tema.Normal(9F)
+        };
+
+        /// <summary>Etiqueta de una fila de filtros ("Buscar (F2):", "Cliente:").</summary>
+        public static Label CrearEtiquetaFiltro(string texto) => new()
+        {
+            Text = texto,
+            ForeColor = Tema.TextoSecundario,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 0, 6, 0)
+        };
+
         public static TableLayoutPanel CrearRejilla(int filas)
         {
             var t = new TableLayoutPanel
