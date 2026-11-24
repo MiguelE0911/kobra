@@ -125,7 +125,7 @@ kobra/
 
 Incluido: clientes, facturas, pagos, anulaciones con motivo, estado de cuenta, antigüedad de saldos y panel de inicio.
 
-Todavía **no** incluido: inicio de sesión y roles, notas de crédito y débito, bitácora de usuario, gestiones de cobranza, exportación a Excel o PDF, intereses por mora. Tampoco la factura electrónica de la DGI, varias monedas ni la integración contable.
+**No** incluido: inicio de sesión y roles, notas de crédito y débito, bitácora de usuario, gestiones de cobranza, exportación a Excel o PDF, intereses por mora. Tampoco la factura electrónica de la DGI, varias monedas ni la integración contable.
 
 ## Documentación
 
