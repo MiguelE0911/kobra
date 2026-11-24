@@ -78,6 +78,15 @@ public class PagoNegocio
     public List<Pago> ListarPorFactura(int facturaId) =>
         facturaId > 0 ? _datos.ListarPorFactura(facturaId) : [];
 
+    /// <summary>Facturas del cliente que todavía tienen saldo, ordenadas por vencimiento.</summary>
+    public List<Factura> ObtenerFacturasConSaldo(int clienteId) =>
+        clienteId > 0
+            ? _facturaDatos.Buscar(null, clienteId, null, false, MaximoResultados)
+                .Where(f => !f.Anulada && f.Saldo > 0)
+                .OrderBy(f => f.FechaVencimiento)
+                .ToList()
+            : [];
+
     // privados
 
     private static void Normalizar(Pago p)
