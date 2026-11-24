@@ -133,29 +133,56 @@ El saldo y el estado se **calculan**, no se escriben a mano. Brandon y Wilma deb
 - Un cliente inactivo no aparece por defecto en la búsqueda (hay un filtro "Solo activos"). **La regla "no se factura a un cliente inactivo" la aplica el módulo de Facturas** (Brandon).
 - La búsqueda trae como máximo 50 filas ordenadas por nombre y filtra por código, nombre o cédula/RUC.
 
-## 5. Puntos de extensión para Brandon y Wilma
+## 5. Estado de los módulos y etapas de Pagos
 
-### Qué ya existe
+### Etapa A — punto de partida tras la integración
 
-- `FrmFacturas` y `FrmPagos` son formularios vacíos ya conectados al menú (Ctrl+2 y Ctrl+3). Cada quien trabaja en sus propios archivos para evitar conflictos de git.
-- Las tablas `Factura` y `Pago` y la vista `vw_FacturaSaldo` ya están en el script.
+- Clientes y Facturas ya están implementados. `FrmPagos` sigue siendo el esqueleto conectado al menú (`Ctrl+D3`); los reportes no tienen ítem propio en `FrmPrincipal`.
+- Las tablas `Factura` y `Pago` y la vista `vw_FacturaSaldo` ya están en `Database\01_CrearBaseDatos.sql`.
+- Existen los controles reutilizables en `Kobra.UI\Componentes` (`FormularioModulo`, `BarraTituloModulo`, `BarraAcciones`, `BotonTema`, `TarjetaPanel`, `CampoFicha`, `EstiloGrid`, `DialogoConfirmacion`) y la paleta en `Tema.cs`.
+- El panel de inicio (`CtlInicio`) ya muestra la antigüedad global de la cartera en cinco tramos. Esa lógica pertenece a Miguel y no se modifica.
 - Una sola instancia de cada módulo: si ya está abierto, el menú lo trae al frente.
 
-### Patrón a copiar (usar Cliente como modelo)
+### Etapa B — patrón a copiar
 
 | Capa | Archivo modelo | Qué copiar |
 | --- | --- | --- |
-| Entidades | `Kobra.Entidades\Cliente.cs` | Propiedades que reflejan la tabla |
-| Datos | `Kobra.Datos\ClienteDatos.cs` | `using` en conexión, comando y lector; abrir la conexión lo más tarde posible; parámetros tipados; `catch (SqlException)` que lanza `DatosException` |
-| Negocio | `Kobra.Negocio\ClienteNegocio.cs` | Normalizar, validar, lanzar `ReglaNegocioException` con el nombre del campo |
-| UI | `Kobra.UI\FrmClientes.cs` | Búsqueda con retardo, lista de solo lectura, `ErrorProvider`, atajos F2, F5, Ctrl+S y Esc, y captura de `ReglaNegocioException` y `DatosException` sin cerrar la aplicación |
+| Entidades | `Kobra.Entidades\Factura.cs` | Propiedades de la tabla más los campos calculados que vienen de `vw_FacturaSaldo` |
+| Datos | `Kobra.Datos\FacturaDatos.cs` | `using` en conexión, comando y lector; abrir la conexión lo más tarde posible; parámetros tipados; `catch (SqlException)` que lanza `DatosException` |
+| Negocio | `Kobra.Negocio\FacturaNegocio.cs` | `Normalizar`, `Validar`, `Error(mensaje, campo)`, inyección de constructores para pruebas |
+| UI | `Kobra.UI\FrmFacturas.cs` | Pseudo-pestañas con `BotonTema` y `UserControl` visibles, atajos F2, F5, Ctrl+N, Ctrl+S y Esc, y captura de `ReglaNegocioException` y `DatosException` sin cerrar la aplicación |
 
-### Cosas que Brandon y Wilma deben tener en cuenta
+### Etapa C — acceso a datos y reglas de Pago
 
-- **Pago** (Wilma): un pago no puede superar el saldo de su factura. Validarlo en `PagoNegocio` leyendo el saldo de `vw_FacturaSaldo`. Si se agregan varios pagos a la vez, usar una sola `SqlTransaction`.
-- **Factura** (Brandon): bloquear si el cliente está inactivo. El control del límite de crédito (`SaldoCliente + TotalFactura <= LimiteCredito`) está en `CLAUDE.md`; falta definir cómo se autoriza la excepción de un supervisor.
-- **Anulación**: las facturas y pagos no se borran. Se anulan con motivo y fecha (columnas ya creadas).
-- **Nuevas tablas o columnas**: agregarlas en un script nuevo (`Database\02_...sql`), no editando el `01`, para que nadie tenga que recrear su base.
+- `Pago.cs` refleja la tabla `dbo.Pago` y trae campos de consulta de la factura y el cliente. `PagoFactura` se mantiene como lectura de solo los pagos asociados a una factura.
+- `PagoDatos` lee el saldo siempre de `dbo.vw_FacturaSaldo`. `Insertar` usa `SqlTransaction` y `UPDLOCK, HOLDLOCK` sobre `dbo.Factura` para que dos pagos concurrentes no superen el saldo; devuelve `null` si la factura desapareció, está anulada o el monto ya no cabe.
+- `Anular` repite la condición `Anulado = 0` dentro del `UPDATE`, igual que la anulación de Factura: es una defensa contra cambios ocurridos entre la lectura y la escritura.
+- `PagoNegocio` valida factura activa, fecha no futura, `Monto > 0` y `Monto <= Saldo`. El motivo de anulación es obligatorio y de máximo 250 caracteres. Los mensajes llevan `nameof(...)` para que la UI marque el control.
+
+### Etapa D — formulario de Pagos
+
+- `FrmPagos` hereda `FormularioModulo` y copia las pseudo-pestañas de `FrmFacturas`: un `FlowLayoutPanel` de `BotonTema` y un `Panel` con `UserControl`s alternados por `.Visible`.
+- Vistas: consulta de pagos, registro de pago (facturas con saldo del cliente elegido), anulación de pago y consultas/reportes.
+- Las facturas con saldo se obtienen de `vw_FacturaSaldo`; no se guarda un DTO paralelo al de Factura.
+- No se agregan ítems al menú de `FrmPrincipal`.
+
+### Etapa E — consultas y reportes
+
+- `ReporteDatos` y `ReporteNegocio` son un par nuevo: estado de cuenta del cliente y antigüedad detallada con filtro por cliente.
+- Se reutilizan los cinco tramos de `ResumenDatos` (Corriente, 1-30, 31-60, 61-90 y más de 90) sin editar los archivos de Miguel.
+
+### Etapa F — datos de prueba y cierre
+
+- `Database\02_datos_prueba.sql` se ejecuta después del `01`, es idempotente y conserva `DEMO001` a `DEMO004`.
+- Cubre facturas pagada, parcial, pendiente corriente, vencidas en distintos tramos, anulada, pago anulado y cliente inactivo.
+- Verificación: compilación de la solución y recorrido registrar factura → registrar pago → anular pago → anular factura.
+
+### Decisiones confirmadas para Pagos
+
+- Los atajos son los del código ya implementado (`F2` buscar, `F5` actualizar, `Ctrl+N` nuevo, `Ctrl+S` guardar, `Esc` cerrar). Se descartan los de la maqueta (`F1`, `F3`, `F9`).
+- No se toca `FrmPrincipal` ni `ResumenDatos`/`ResumenCartera`.
+- Los nombres de los clientes demo se mantienen por ahora.
+- Los reportes viven dentro de `FrmPagos`, sin formularios nuevos en el menú.
 
 ## 6. Preparar el entorno
 
