@@ -9,7 +9,7 @@ namespace Kobra.UI
     public class FormularioModulo : Form
     {
         /// <summary>Márgenes del cuerpo del módulo, iguales a los de las barras de título y de acciones.</summary>
-        protected const int MargenCuerpo = 12;
+        internal const int MargenCuerpo = 12;
 
         public FormularioModulo()
         {

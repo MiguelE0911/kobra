@@ -35,7 +35,6 @@ namespace Kobra.UI
             mnuPagos = new ToolStripMenuItem();
             mnuSalir = new ToolStripMenuItem();
             barraEstado = new StatusStrip();
-            lblEstadoListo = new ToolStripStatusLabel();
             lblEstadoBd = new ToolStripStatusLabel();
             lblEstadoServidor = new ToolStripStatusLabel();
             lblEstadoVersion = new ToolStripStatusLabel();
@@ -92,15 +91,10 @@ namespace Kobra.UI
             //
             // barraEstado
             //
-            barraEstado.Items.AddRange(new ToolStripItem[] { lblEstadoListo, lblEstadoBd, lblEstadoServidor, lblEstadoVersion });
+            barraEstado.Items.AddRange(new ToolStripItem[] { lblEstadoBd, lblEstadoServidor, lblEstadoVersion });
             barraEstado.Name = "barraEstado";
             barraEstado.SizingGrip = false;
             barraEstado.TabIndex = 1;
-            //
-            // lblEstadoListo
-            //
-            lblEstadoListo.Name = "lblEstadoListo";
-            lblEstadoListo.Text = "● Listo";
             //
             // lblEstadoBd
             //
@@ -149,7 +143,6 @@ namespace Kobra.UI
         private ToolStripMenuItem mnuPagos;
         private ToolStripMenuItem mnuSalir;
         private StatusStrip barraEstado;
-        private ToolStripStatusLabel lblEstadoListo;
         private ToolStripStatusLabel lblEstadoBd;
         private ToolStripStatusLabel lblEstadoServidor;
         private ToolStripStatusLabel lblEstadoVersion;

@@ -32,8 +32,7 @@ namespace Kobra.UI
             barraEstado.BackColor = Tema.ContenedorAlto;
             barraEstado.ForeColor = Tema.TextoSecundario;
             barraEstado.Font = Tema.Numeros(8.5F);
-            lblEstadoListo.ForeColor = Tema.Primario;
-            foreach (var item in new[] { lblEstadoListo, lblEstadoBd, lblEstadoServidor })
+            foreach (var item in new[] { lblEstadoBd, lblEstadoServidor })
                 item.Padding = new Padding(0, 0, 14, 0);
 
             var (servidor, baseDatos) = BaseDatos.Destino();
