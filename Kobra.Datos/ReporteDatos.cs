@@ -32,6 +32,24 @@ public class ReporteDatos
            AND (@ClienteId IS NULL OR v.ClienteId = @ClienteId)
          ORDER BY v.DiasVencidos DESC, v.Numero;";
 
+    private const string SqlClientesConFacturas = @"
+        SELECT c.Id, c.Codigo, c.Nombre
+          FROM dbo.Cliente c
+         WHERE EXISTS (SELECT 1 FROM dbo.Factura f WHERE f.ClienteId = c.Id)
+         ORDER BY c.Nombre;";
+
+    private const string SqlClientesConSaldo = @"
+        SELECT c.Id, c.Codigo, c.Nombre
+          FROM dbo.Cliente c
+         WHERE EXISTS (SELECT 1 FROM dbo.vw_FacturaSaldo v WHERE v.ClienteId = c.Id AND v.Saldo > 0)
+         ORDER BY c.Nombre;";
+
+    /// <summary>Clientes con al menos una factura (activos o no), para elegir en el estado de cuenta.</summary>
+    public List<Cliente> ListarClientesConFacturas() => ListarClientes(SqlClientesConFacturas);
+
+    /// <summary>Clientes con saldo pendiente, para filtrar la antigüedad de saldos.</summary>
+    public List<Cliente> ListarClientesConSaldo() => ListarClientes(SqlClientesConSaldo);
+
     /// <summary>Cabecera y facturas del estado de cuenta. Devuelve null si el cliente no existe.</summary>
     public EstadoCuenta? ObtenerEstadoCuenta(int clienteId)
     {
@@ -109,6 +127,33 @@ public class ReporteDatos
                     FechaVencimiento = rd.GetDateTime(rd.GetOrdinal("FechaVencimiento")),
                     Saldo = rd.GetDecimal(rd.GetOrdinal("Saldo")),
                     DiasVencidos = Convert.ToInt32(rd.GetValue(rd.GetOrdinal("DiasVencidos")))
+                });
+            }
+            return lista;
+        }
+        catch (SqlException ex)
+        {
+            throw DatosException.Desde(ex);
+        }
+    }
+
+    private static List<Cliente> ListarClientes(string sql)
+    {
+        var lista = new List<Cliente>();
+
+        try
+        {
+            using var cn = Conexion.Crear();
+            using var cmd = new SqlCommand(sql, cn);
+            cn.Open();
+            using var rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                lista.Add(new Cliente
+                {
+                    Id = rd.GetInt32(rd.GetOrdinal("Id")),
+                    Codigo = rd.GetString(rd.GetOrdinal("Codigo")),
+                    Nombre = rd.GetString(rd.GetOrdinal("Nombre"))
                 });
             }
             return lista;

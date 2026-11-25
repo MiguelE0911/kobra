@@ -35,6 +35,16 @@ namespace Kobra.UI
         }
 
         /// <summary>
+        /// Objeto enlazado a la fila seleccionada. Se lee de <c>SelectedRows</c> y, si no hay, de <c>CurrentRow</c>:
+        /// según cómo se cambie la fila (clic, teclado o código) solo uno de los dos llega ya actualizado.
+        /// </summary>
+        public static T? Seleccionado<T>(DataGridView g) where T : class
+        {
+            var fila = g.SelectedRows.Count > 0 ? g.SelectedRows[0] : g.CurrentRow;
+            return fila?.DataBoundItem as T;
+        }
+
+        /// <summary>
         /// Agrega una columna de texto. <paramref name="propiedad"/> enlaza la columna a una propiedad del
         /// origen de datos; sin ella, la columna se llena a mano.
         /// </summary>

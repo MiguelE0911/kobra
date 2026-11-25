@@ -10,10 +10,17 @@ namespace Kobra.UI
     internal sealed class CtlReporteCuenta : UserControl
     {
         private readonly ReporteNegocio _negocio = new();
-        private readonly ClienteNegocio _clienteNegocio = new();
+
+        // Factura cuyos pagos se ven abajo; evita repetir la consulta cuando llegan los dos eventos de selección.
+        private int _facturaMostradaId;
 
         private readonly TarjetaPanel _tarjetaFiltros = new("ESTADO DE CUENTA DEL CLIENTE");
-        private readonly ComboBox _cboCliente = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboCliente = new()
+        {
+            DropDownStyle = ComboBoxStyle.DropDown,
+            AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+            AutoCompleteSource = AutoCompleteSource.ListItems
+        };
         private readonly BotonTema _btnGenerar = new("&Generar", EstiloBoton.Primario);
         private readonly Label _lblCliente = new() { AutoSize = true, Font = Tema.Negrita(9.5F), ForeColor = Tema.Primario };
         private readonly Label _lblLimite = new() { AutoSize = true, Font = Tema.Normal(8.5F), ForeColor = Tema.TextoSecundario };
@@ -76,7 +83,7 @@ namespace Kobra.UI
         {
             try
             {
-                ItemCliente.Llenar(_cboCliente, _clienteNegocio.Buscar(null, soloActivos: false), "Seleccione un cliente");
+                ItemCliente.Llenar(_cboCliente, _negocio.ListarClientesConFacturas(), "Seleccione un cliente");
             }
             catch (DatosException ex)
             {
@@ -86,7 +93,9 @@ namespace Kobra.UI
 
         public void Generar()
         {
-            var clienteId = (_cboCliente.SelectedItem as ItemCliente)?.Id ?? 0;
+            // Con el combo editable, SelectedItem puede quedar con el cliente anterior si se escribió otro texto.
+            var elegido = _cboCliente.SelectedItem as ItemCliente;
+            var clienteId = elegido is not null && elegido.Texto == _cboCliente.Text ? elegido.Id : 0;
 
             try
             {
@@ -103,16 +112,20 @@ namespace Kobra.UI
                 _lblLimite.Text = $"Límite de crédito: {cuenta.LimiteCredito.Dinero()}" +
                     (cuenta.Activo ? string.Empty : "  ·  Cliente inactivo");
 
-                _dgvFacturas.DataSource = cuenta.Facturas;
                 _lblTotales.Text =
                     $"Facturado: {cuenta.TotalFacturado.Dinero()}   ·   " +
                     $"Cobrado: {cuenta.TotalCobrado.Dinero()}   ·   " +
                     $"Saldo: {cuenta.Saldo.Dinero()}";
 
-                _dgvFacturas.ClearSelection();
-                _dgvFacturas.CurrentCell = null;
+                // La primera factura queda seleccionada al enlazar y sus pagos se cargan en el evento de selección.
+                _facturaMostradaId = 0;
                 _dgvPagos.DataSource = null;
-                _tarjetaPagos.MostrarNota("Seleccione una factura");
+                _dgvFacturas.DataSource = cuenta.Facturas;
+                if (cuenta.Facturas.Count == 0)
+                    _tarjetaPagos.MostrarNota("El cliente no tiene facturas");
+                else
+                    MostrarPagosSeleccionados();
+
                 _tarjetaFiltros.MostrarNota($"{cuenta.Facturas.Count} factura(s)");
             }
             catch (ReglaNegocioException ex)
@@ -246,9 +259,12 @@ namespace Kobra.UI
 
         // eventos y helpers
 
-        private void DgvFacturas_CambioSeleccion(object? sender, EventArgs e)
+        private void DgvFacturas_CambioSeleccion(object? sender, EventArgs e) => MostrarPagosSeleccionados();
+
+        private void MostrarPagosSeleccionados()
         {
-            if (_dgvFacturas.CurrentRow?.DataBoundItem is not LineaEstadoCuenta linea)
+            var linea = EstiloGrid.Seleccionado<LineaEstadoCuenta>(_dgvFacturas);
+            if (linea is null || linea.FacturaId == _facturaMostradaId)
                 return;
 
             try
@@ -256,16 +272,20 @@ namespace Kobra.UI
                 var pagos = _negocio.ListarPagosDeFactura(linea.FacturaId);
                 _dgvPagos.DataSource = pagos;
                 _dgvPagos.ClearSelection();
+                _facturaMostradaId = linea.FacturaId;
                 _tarjetaPagos.MostrarNota($"Factura {linea.Numero} · {pagos.Count} pago(s)");
             }
             catch (DatosException ex)
             {
+                _facturaMostradaId = 0;
+                _dgvPagos.DataSource = null;
                 _tarjetaPagos.MostrarNota(ex.Message, esError: true);
             }
         }
 
         private void LimpiarDetalle()
         {
+            _facturaMostradaId = 0;
             _lblCliente.Text = "—";
             _lblLimite.Text = string.Empty;
             _lblTotales.Text = string.Empty;

@@ -22,6 +22,12 @@ public class ReporteNegocio
         _pagoDatos = pagoDatos;
     }
 
+    /// <summary>Clientes con facturas, para el selector del estado de cuenta.</summary>
+    public List<Cliente> ListarClientesConFacturas() => _datos.ListarClientesConFacturas();
+
+    /// <summary>Clientes con saldo pendiente, para el filtro de la antigüedad.</summary>
+    public List<Cliente> ListarClientesConSaldo() => _datos.ListarClientesConSaldo();
+
     /// <summary>Estado de cuenta de un cliente, con facturas y totales.</summary>
     public EstadoCuenta? ObtenerEstadoCuenta(int clienteId)
     {

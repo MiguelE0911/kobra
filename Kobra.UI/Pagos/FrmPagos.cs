@@ -89,7 +89,13 @@ namespace Kobra.UI
                 if (_seleccionado is not null)
                     _anulacion.Cargar(_seleccionado);
             };
-            _btnTabReportes.Click += (_, _) => CambiarVista(Vista.Reportes);
+            _btnTabReportes.Click += (_, _) =>
+            {
+                // Los combos solo listan clientes con facturas o saldo: se actualizan al entrar.
+                _reporteCuenta.CargarClientes();
+                _reporteAntiguedad.CargarClientes();
+                CambiarVista(Vista.Reportes);
+            };
 
             _btnNuevo.Click += (_, _) =>
             {

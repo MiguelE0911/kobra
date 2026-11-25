@@ -10,10 +10,17 @@ namespace Kobra.UI
     internal sealed class CtlReporteAntiguedad : UserControl
     {
         private readonly ReporteNegocio _negocio = new();
-        private readonly ClienteNegocio _clienteNegocio = new();
+
+        // Tramo cuyo detalle se ve abajo; evita reenlazar cuando llegan los dos eventos de selección.
+        private TramoAntiguedad? _tramoMostrado;
 
         private readonly TarjetaPanel _tarjetaFiltros = new("ANTIGÜEDAD DE SALDOS");
-        private readonly ComboBox _cboCliente = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+        private readonly ComboBox _cboCliente = new()
+        {
+            DropDownStyle = ComboBoxStyle.DropDown,
+            AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+            AutoCompleteSource = AutoCompleteSource.ListItems
+        };
         private readonly BotonTema _btnGenerar = new("&Generar", EstiloBoton.Primario);
         private readonly BarraTotales _lblResumen = new();
 
@@ -60,6 +67,7 @@ namespace Kobra.UI
         {
             if (_cboCliente.Items.Count > 0)
                 _cboCliente.SelectedIndex = 0;
+            _tramoMostrado = null;
             _dgvTramos.DataSource = null;
             _dgvDetalle.DataSource = null;
             _lblResumen.Text = string.Empty;
@@ -78,7 +86,7 @@ namespace Kobra.UI
         {
             try
             {
-                ItemCliente.Llenar(_cboCliente, _clienteNegocio.Buscar(null, soloActivos: false), "Todos los clientes");
+                ItemCliente.Llenar(_cboCliente, _negocio.ListarClientesConSaldo(), "Todos los clientes");
             }
             catch (DatosException ex)
             {
@@ -88,26 +96,35 @@ namespace Kobra.UI
 
         public void Generar()
         {
-            var clienteId = (_cboCliente.SelectedItem as ItemCliente)?.Id;
-            if (clienteId == 0)
-                clienteId = null;
+            // Con el combo editable, SelectedItem puede quedar con el cliente anterior si se escribió otro texto.
+            var elegido = _cboCliente.SelectedItem as ItemCliente;
+            if (_cboCliente.Items.Count > 0 && (elegido is null || elegido.Texto != _cboCliente.Text))
+            {
+                _tarjetaFiltros.MostrarNota("Elija un cliente de la lista.", esError: true);
+                return;
+            }
+
+            int? clienteId = elegido is null || elegido.Id == 0 ? null : elegido.Id;
 
             try
             {
                 var reporte = _negocio.ObtenerAntiguedad(clienteId);
-                _dgvTramos.DataSource = reporte.Tramos;
-                _dgvTramos.ClearSelection();
-                _dgvTramos.CurrentCell = null;
+
+                // El primer tramo queda seleccionado al enlazar y su detalle se carga en el evento de selección.
+                _tramoMostrado = null;
                 _dgvDetalle.DataSource = null;
+                _dgvTramos.DataSource = reporte.Tramos;
+                MostrarDetalleSeleccionado();
 
                 _lblResumen.Text =
                     $"Saldo total: {reporte.SaldoTotal.Dinero()}   ·   " +
                     $"{reporte.Facturas} factura(s) con saldo";
-                _tarjetaTramos.MostrarNota("Seleccione un tramo para ver el detalle");
+                _tarjetaTramos.MostrarNota(string.Empty);
                 _tarjetaFiltros.MostrarNota(string.Empty);
             }
             catch (DatosException ex)
             {
+                _tramoMostrado = null;
                 _dgvTramos.DataSource = null;
                 _dgvDetalle.DataSource = null;
                 _lblResumen.Text = string.Empty;
@@ -201,11 +218,15 @@ namespace Kobra.UI
             return _tarjetaDetalle;
         }
 
-        private void DgvTramos_CambioSeleccion(object? sender, EventArgs e)
+        private void DgvTramos_CambioSeleccion(object? sender, EventArgs e) => MostrarDetalleSeleccionado();
+
+        private void MostrarDetalleSeleccionado()
         {
-            if (_dgvTramos.CurrentRow?.DataBoundItem is not TramoAntiguedad tramo)
+            var tramo = EstiloGrid.Seleccionado<TramoAntiguedad>(_dgvTramos);
+            if (tramo is null || ReferenceEquals(tramo, _tramoMostrado))
                 return;
 
+            _tramoMostrado = tramo;
             _dgvDetalle.DataSource = tramo.Detalle;
             _dgvDetalle.ClearSelection();
             _tarjetaDetalle.MostrarNota($"{tramo.Nombre} · {tramo.Facturas} factura(s)");
